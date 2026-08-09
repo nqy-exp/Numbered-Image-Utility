@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ lang_dict['title'] }} - Compare</title>
+<style>
+/* --- 1. 保持你原有的所有 CSS 样式 (完全保留) --- */
+:root {
+--primary-color: #e67e22;
+--primary-hover: #d35400;
+--text-dark: #2c3e50;
+--bg-gray: #f4f4f9;
+--light-orange: #fef5ed;
+--border-orange: #fad7a0;
+}
+
+body { font-family: sans-serif; margin: 0; padding: 20px; background: var(--bg-gray); color: var(--text-dark); }
+
+.header-bar {
+display: flex; justify-content: space-between; align-items: center;
+margin-bottom: 30px; padding-bottom: 15px; border-bottom: 2px solid #ddd;
+position: relative;
+}
+.header-title { font-size: 1.4em; margin: 0; }
+
+.reorder-container {
+position: absolute; left: 50%; transform: translateX(-50%);
+}
+.btn-reorder-main {
+background: var(--primary-color); color: white; border: none;
+padding: 10px 24px; border-radius: 8px; font-weight: bold; cursor: pointer;
+transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.2);
+}
+.btn-reorder-main:hover { background: var(--primary-hover); transform: translateY(-2px); }
+
+.btn-back {
+text-decoration: none; background: white; color: var(--primary-color);
+padding: 8px 16px; border-radius: 6px; border: 1px solid var(--primary-color);
+font-weight: bold; transition: all 0.3s; z-index: 10;
+}
+
+/* 主页面：三列布局 */
+.compare-grid {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 20px; width: 100%; max-width: 1400px; margin: 0 auto;
+}
+@media (max-width: 1000px) { .compare-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); } }
+
+.compare-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; min-height: 450px; }
+.compare-card.empty { visibility: hidden; pointer-events: none; }
+
+.image-viewport { width: 100%; height: 300px; background: #222; overflow: hidden; position: relative; cursor: grab; }
+.compare-img { position: absolute; top: 50%; left: 50%; width: 100%; transform: translate(-50%, -50%) scale(1); will-change: transform; pointer-events: none; }
+
+.controls-area { padding: 8px 12px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; }
+.zoom-group { display: flex; align-items: center; gap: 8px; }
+input[type=range] { width: 80px; accent-color: var(--primary-color); }
+.lock-btn { padding: 4px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; border: 1px solid #ccc; background: white; }
+.lock-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+.info-area { padding: 12px 15px; text-align: left; flex-grow: 1; }
+.info-filename { font-weight: bold; font-size: 0.9em; display: block; word-break: break-all; }
+.info-date { font-size: 0.75em; color: #888; margin-top:4px; }
+.info-notes { font-size: 0.8em; color: #555; margin-top:6px; white-space: pre-wrap; }
+
+/* 排序弹窗 (Modal) */
+#sortModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+.modal-content { background: white; padding: 0; border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+.modal-header { padding: 15px 25px; font-size: 1.3em; font-weight: bold; text-align: center; color: var(--primary-color); border-bottom: 1px solid #eee; }
+
+.tray-section { background: #f8f9fa; padding: 12px 20px; border-bottom: 1px solid #eee; }
+.tray-title { font-size: 11px; color: #888; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.tray-items { display: flex; flex-wrap: wrap; gap: 8px; min-height: 45px; }
+
+.tray-item { width: 50px; height: 40px; background: white; border: 1px solid #ddd; border-radius: 4px; cursor: grab; overflow: hidden; flex-shrink: 0; }
+.tray-item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+
+.modal-body { flex: 1; overflow-y: auto; padding: 20px 25px; }
+.sort-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.sort-slot { aspect-ratio: 4/3; border: 2px dashed #ccc; border-radius: 8px; position: relative; background: #fafafa; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.sort-slot.drag-over { background: var(--light-orange); border-color: var(--primary-color); }
+
+.slot-content { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; box-sizing: border-box; cursor: grab; }
+.slot-content img { width: 80%; height: 65%; object-fit: cover; border-radius: 4px; pointer-events: none; }
+.slot-content span { font-size: 10px; text-align: center; margin-top: 4px; word-break: break-all; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+
+.modal-footer { padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; background: white; }
+.btn-group { display: flex; gap: 10px; }
+.btn-confirm { background: var(--primary-color); color: white; border: none; padding: 8px 24px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+.btn-cancel { background: #ccc; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
+
+.btn-add-row { background: #eee; border: 1px solid #ddd; padding: 7px 15px; border-radius: 4px; cursor: pointer; font-size: 13px;}
+.btn-remove-row { background: #fff0f0; color: #e74c3c; border: 1px solid #ffcdd2; padding: 7px 15px; border-radius: 4px; cursor: pointer; font-size: 13px;}
+.btn-remove-row:hover { background: #ffebee; }
+
+/* 其他样式 */
+.favicon-mini { width: 14px; height: 14px; vertical-align: super; margin-left: 3px; display: inline-block; }
+.btn { padding: 5px 10px; text-decoration: none; border-radius: 4px; font-size: 12px; display: inline-block; transition: all 0.2s; font-weight: 500; }
+.btn-edit { background: #ffc107; color: black; margin-left: 4px; }
+
+/* --- 极小使用的引导链接样式 --- */
+.tiny-guide-link {
+    position: fixed;         /* 固定在屏幕上，不随页面滚动 */
+    top: 10px;               /* 距离顶部 10px */
+    right: 10px;              /* 距离左侧 10px */
+    font-size: 10px;         /* 非常小的字体 */
+    color: #eba56b;          /* 浅灰色 (带一点点灰调) */
+    text-decoration: none;   /* 去掉下划线 */
+    z-index: 9999;           /* 确保它永远在最顶层 */
+    transition: all 0.3s ease; /* 平滑过渡动画 */
+    opacity: 0.6;            /* 默认半透明，不抢眼 */
+}
+
+.tiny-guide-link:hover {
+    color: var(--primary-color); /* 鼠标移上去变为主题橙色 */
+    opacity: 1;                  /* 变得清晰 */
+    transform: translateX(3px);  /* 极其轻微的向右滑动效果，增加互动感 */
+}
+
+/* --- 【优化后】文件名链接：增强视觉重量，使其更醒目 --- */
+.info-filename-link {
+    text-decoration: none;  /* 去掉下划线 */
+    color: var(--text-dark); /* 明确使用深色变量，不再仅仅是 inherit */
+    display: block;         /* 让点击区域占满整行 */
+    transition: all 0.2s ease; /* 平滑过渡所有属性 */
+
+    /* --- 解决“太细”的核心设置 --- */
+    font-size: 1.05rem;     /* 稍微放大一点点 (约 17px)，增加存在感 */
+    font-weight: 700;       /* 【关键】强制使用 Bold (700) 粗体，解决“细”的问题 */
+    
+}
+
+/* 鼠标悬停时的反馈 */
+.info-filename-link:hover {
+    color: var(--primary-color); /* 悬停时变为主题橙色 */
+    transform: translateY(-1px); /* 增加一个极其轻微的上浮感，提示这是个可交互元素 */
+}
+
+
+</style>
+</head>
+<body id="body">
+
+    <a href="https://nqy-exp.github.io/niu/" target="_blank" rel="noopener noreferrer" class="tiny-guide-link">
+    {{ lang_dict['user_guide'] }}
+</a>
+
+<div class="header-bar">
+    <a id="backLink" href="javascript:void(0);" onclick="smartBack()" class="btn-back">{{ lang_dict['btn_back_to_select'] }}</a>
+    <div class="reorder-container">
+        <button class="btn-reorder-main" onclick="openSortModal()">{{ lang_dict['btn_reorder'] }}</button>
+    </div>
+    <div style="width: 80px;"></div>
+</div>
+
+<div class="compare-grid" id="compareGrid"></div>
+
+<!-- 排序弹窗 -->
+<div id="sortModal">
+    <div class="modal-content">
+        <div class="modal-header">{{ lang_dict['modal_sort_title'] }}</div>
+        <div class="tray-section">
+            <span class="tray-title">📦 {{ lang_dict['text_tray'] }}</span>
+            <div id="trayItems" class="tray-items"></div>
+        </div>
+        <div class="modal-body">
+            <div id="sortGrid" class="sort-grid"></div>
+        </div>
+        <div class="modal-footer">
+            <div class="btn-group">
+                <button class="btn-add-row" onclick="addRow()">{{ lang_dict['btn_add_row'] }}</button>
+                <button class="btn-remove-row" onclick="removeRow()"> {{ lang_dict['btn_remove_row'] }}</button>
+            </div>
+            <div class="btn-group">
+                <button class="btn-cancel" onclick="closeSortModal()">{{ lang_dict['btn_cancel'] }}</button>
+                <button class="btn-confirm" onclick="saveNewOrder()">{{ lang_dict['btn_confirm'] }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script id="lang-holder" type="application/json">
+    {{ lang_dict | tojson }}
+</script>
+<script id="data-holder" type="application/json">
+    {{ compare_items | tojson }}
+</script>
+
+<script>
+// --- 1. 全局变量定义 ---
+const LANG_DICT = JSON.parse(document.getElementById('lang-holder').textContent);
+const RAW_DATA_MASTER = JSON.parse(document.getElementById('data-holder').textContent);
+
+let LAYOUT = [];     
+let ALL_FILES_RAW = []; 
+
+const grid = document.getElementById('compareGrid');
+const backLink = document.getElementById('backLink');
+const modal = document.getElementById('sortModal');
+const sortGrid = document.getElementById('sortGrid');
+const trayItemsContainer = document.getElementById('trayItems');
+
+let activeCardState = null; 
+
+// --- 2. 初始化函数 ---
+function init() {
+    RAW_DATA_MASTER.forEach(item => {
+        const lastDotIndex = item.filename.lastIndexOf('.');
+        item.display_name = lastDotIndex !== -1 ? item.filename.substring(0, lastDotIndex) : item.filename;
+    });
+
+    ALL_FILES_RAW = RAW_DATA_MASTER.map(item => item.filename);
+    LAYOUT = RAW_DATA_MASTER.map(item => ({...item}));
+    while (LAYOUT.length % 3 !== 0) { LAYOUT.push(null); }
+
+    const currentSelection = RAW_DATA_MASTER.map(i => i.filename).join(',');
+    backLink.href = `/compare_index?selected=${encodeURIComponent(currentSelection)}`;
+
+    renderCards();
+    setupIntersectionObserver(); // 初始化观察器
+}
+
+// --- 3. 主页面渲染逻辑 ---
+function renderCards() {
+    grid.innerHTML = '';
+    LAYOUT.forEach((item, index) => {
+        if (item && item.filename) createCompareCard(item, index);
+        else createEmptyCard(index);
+    });
+}
+
+function createEmptyCard(index) {
+    const card = document.createElement('div');
+    card.className = 'compare-card empty';
+    grid.appendChild(card);
+}
+
+function createCompareCard(item, index) {
+    const card = document.createElement('div');
+    card.className = 'compare-card';
+    const state = { 
+        scale: 100, offsetX: 0, offsetY: 0, isLocked: false, 
+        isDragging: false, startX: 0, startY: 0, domImg: null, 
+        domViewport: null, domSlider: null, domValText: null, domLockBtn: null 
+    };
+
+    // 1. 先用 innerHTML 构建基础结构（不包含任何用户输入数据）
+    card.innerHTML = `
+        <div class="image-viewport" id="viewport-${index}" data-src="/images/${item.filename}">
+            <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" 
+                 class="compare-img" 
+                 id="img-${index}" 
+                 style="opacity: 0;">
+            <div class="loading-spinner">...</div>
+        </div>
+        <div class="controls-area">
+            <div class="zoom-group">
+                <input type="range" min="10" max="500" value="100" id="slider-${index}">
+                <span style="font-size: 12px;" id="val-${index}">100%</span>
+            </div>
+            <button class="lock-btn" id="lock-${index}"></button>
+        </div>
+        <div class="info-area">
+           <!-- 这里预留出容器，后续用 textContent 安全注入 -->
+           <a href="/view_com/${encodeURIComponent(item.filename)}" target="_blank" class="info-filename-link" id="link-${index}"></a>
+            <div class="info-date" id="date-${index}"></div>
+            <div class="info-notes" id="notes-${index}"></div>
+        </div>
+    `;
+
+    // 2. 获取刚刚创建的 DOM 元素
+    state.domViewport = card.querySelector(`#viewport-${index}`);
+    state.domImg      = card.querySelector(`#img-${index}`);
+    state.domSlider   = card.querySelector(`#slider-${index}`);
+    state.domValText  = card.querySelector(`#val-${index}`);
+    state.domLockBtn  = card.querySelector(`#lock-${index}`);
+
+    // 3. 【核心安全修复】：使用 textContent 安全地注入用户输入的数据
+    const linkEl = card.querySelector(`#link-${index}`);
+    if (linkEl) linkEl.textContent = item.display_name;
+
+    const dateEl = card.querySelector(`#date-${index}`);
+    if (dateEl) dateEl.textContent = item.experiment_date || '-';
+
+    const notesEl = card.querySelector(`#notes-${index}`);
+    if (notesEl) notesEl.textContent = item.notes || '';
+
+    // --- 以下是原有的逻辑，保持不变 ---
+    if (!state.domViewport || !state.domImg) return;
+
+    state.domLockBtn.className = 'lock-btn'; 
+    state.domLockBtn.innerText = state.isLocked ? LANG_DICT['lock_locked'] : LANG_DICT['lock_unlocked'];
+
+    const applyTransform = () => {
+        if (state.domImg) {
+            state.domImg.style.transform = `translate(calc(-50% + ${state.offsetX}px), calc(-50% + ${state.offsetY}px)) scale(${state.scale / 100})`;
+        }
+    };
+
+    state.domSlider.oninput = function() {
+        if (state.isLocked) return;
+        state.scale = parseInt(this.value);
+        state.domValText.innerText = state.scale + '%';
+        requestAnimationFrame(applyTransform);
+    };
+
+    state.domLockBtn.onclick = function() {
+        state.isLocked = !state.isLocked;
+        state.domLockBtn.innerText = state.isLocked ? LANG_DICT['lock_locked'] : LANG_DICT['lock_unlocked'];
+        state.domLockBtn.classList.toggle('active', state.isLocked);
+    };
+
+    state.domViewport.onmousedown = function(e) {
+        if (state.isLocked) return;
+        state.isDragging = true; 
+        activeCardState = state;
+        state.startX = e.clientX - state.offsetX;
+        state.startY = e.clientY - state.offsetY;
+        state.domViewport.style.cursor = 'grabbing';
+    };
+
+    window._states = window._states || {}; 
+    window._states[index] = state;
+
+    grid.appendChild(card);
+}
+
+
+// 全局拖拽处理 (保持不变)
+window.onmousemove = function(e) {
+    if (!activeCardState || !activeCardState.isDragging || activeCardState.isLocked) return;
+    activeCardState.offsetX = e.clientX - activeCardState.startX;
+    activeCardState.offsetY = e.clientY - activeCardState.startY;
+    requestAnimationFrame(() => {
+        if (activeCardState) {
+            activeCardState.domImg.style.transform = `translate(calc(-50% + ${activeCardState.offsetX}px), calc(-50% + ${activeCardState.offsetY}px)) scale(${activeCardState.scale / 100})`;
+        }
+    });
+};
+
+window.onmouseup = function() { 
+    if (activeCardState) { 
+        activeCardState.isDragging = false; 
+        activeCardState.domViewport.style.cursor = 'grab'; 
+        activeCardState = null; 
+    } 
+};
+
+// --- 排序逻辑核心 ---
+function openSortModal() { modal.style.display = 'flex'; renderSortInterface(); }
+function closeSortModal() { modal.style.display = 'none'; }
+
+function addRow() { 
+    for(let i=0; i<3; i++) LAYOUT.push(null); 
+    renderSortInterface(); 
+}
+
+function removeRow() {
+    if (LAYOUT.length > 3) {
+        LAYOUT.splice(-3);
+        renderSortInterface();
+    } else {
+        alert("Cannot remove the last row.");
+    }
+}
+
+function renderSortInterface() {
+    const usedFiles = LAYOUT.filter(item => item !== null).map(item => item.filename);
+    const availableFiles = ALL_FILES_RAW.filter(f => !usedFiles.includes(f));
+
+    trayItemsContainer.innerHTML = '';
+    availableFiles.forEach(filename => {
+        const div = document.createElement('div');
+        div.className = 'tray-item';
+        div.draggable = true;
+        div.innerHTML = `<img src="/images/${filename}">`; 
+        div.ondragstart = (e) => {
+            e.dataTransfer.setData('source', 'tray');
+            e.dataTransfer.setData('filename', filename);
+        };
+        trayItemsContainer.appendChild(div);
+    });
+
+    sortGrid.innerHTML = '';
+    LAYOUT.forEach((item, index) => {
+        const slot = document.createElement('div');
+        slot.className = 'sort-slot';
+        slot.dataset.index = index;
+        slot.ondragover = (e) => { e.preventDefault(); slot.classList.add('drag-over'); };
+        slot.ondragleave = () => { slot.classList.remove('drag-over'); };
+        slot.ondrop = handleDrop;
+
+        if (item && item.filename) {
+            const content = document.createElement('div');
+            content.className = 'slot-content';
+            content.draggable = true;
+            content.innerHTML = `<img src="/images/${item.filename}"><span class="file-name-label">${item.display_name}</span>`;
+            content.ondragstart = (e) => {
+                e.dataTransfer.setData('source', 'slot');
+                e.dataTransfer.setData('index', index);
+            };
+            slot.appendChild(content);
+        } else {
+            slot.innerHTML = '<span style="color:#ccc; font-size:12px;">Empty</span>';
+        }
+        sortGrid.appendChild(slot);
+    });
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    const source = e.dataTransfer.getData('source');
+    const targetIndex = parseInt(this.dataset.index);
+
+    if (source === 'tray') {
+        const filename = e.dataTransfer.getData('filename');
+        const matchedItem = RAW_DATA_MASTER.find(item => item.filename === filename);
+        LAYOUT[targetIndex] = matchedItem ? {...matchedItem} : {filename: filename};
+    } else if (source === 'slot') {
+        const fromIndex = parseInt(e.dataTransfer.getData('index'));
+        if (fromIndex !== targetIndex) {
+            const temp = LAYOUT[targetIndex];
+            LAYOUT[targetIndex] = LAYOUT[fromIndex];
+            LAYOUT[fromIndex] = temp;
+        }
+    }
+    renderSortInterface();
+}
+
+function setupTrayDrop() {
+    trayItemsContainer.ondragover = (e) => e.preventDefault();
+    trayItemsContainer.ondrop = (e) => {
+        e.preventDefault();
+        const source = e.dataTransfer.getData('source');
+        if (source === 'slot') {
+            const fromIndex = parseInt(e.dataTransfer.getData('index'));
+            LAYOUT[fromIndex] = null; 
+            renderSortInterface();
+        }
+    };
+}
+
+function setupIntersectionObserver() {
+    const transparentPixel = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const viewport = entry.target;
+            const img = viewport.querySelector('img');
+            if (!img) return;
+
+            const currentSrcAttr = img.getAttribute('src');
+            const targetSrc = viewport.dataset.src;
+
+            if (entry.isIntersecting) {
+
+                if (currentSrcAttr !== targetSrc) {
+                    // --- 情况 1：图片未加载或路径不对，需要发起请求 ---
+                    
+                    // 先定义成功回调
+                    img.onload = () => {
+                        
+                        img.style.opacity = "1"; // 必须显示！
+                        const spinner = viewport.querySelector('.loading-spinner');
+                        if (spinner) spinner.remove();
+                    };
+
+                    // 双重保险：如果图片已经在缓存中，onload 可能不会触发
+                    if (img.complete && img.naturalWidth !== 0) {
+                        img.src = targetSrc; // 重新设置一下 src 确保触发渲染
+                        img.style.opacity = "1"; // 必须显示！
+                        const spinner = viewport.querySelector('.loading-spinner');
+                        if (spinner) spinner.remove();
+                    } else {
+                        // 正常的加载流程
+                    
+                        img.src = targetSrc;
+                    }
+                } else {
+                    // 如果路径是对的，但因为某种原因看不见（比如 opacity 是 0）
+                    if (img.style.opacity !== "1") {
+                        img.style.opacity = "1";
+                        const spinner = viewport.querySelector('.loading-spinner');
+                        if (spinner) spinner.remove();
+                    }
+                }
+            } else {
+                // 【离开视口】：释放内存
+                if (currentSrcAttr !== transparentPixel) {
+                    img.src = transparentPixel;
+                    img.style.opacity = "0"; // 隐藏图片，准备下次进入时重新加载
+                }
+            }
+        });
+    }, { rootMargin: '300px' });
+
+    document.querySelectorAll('.image-viewport').forEach(vp => observer.observe(vp));
+}
+
+function smartBack() {
+
+    window._states = {}; // 这一行是灵魂！它会告诉浏览器：之前所有的图片缩放、拖拽状态都可以丢掉了。
+
+    // 获取来源页面的 URL
+    const referrer = document.referrer;
+
+    // 判断来源页面是否包含编辑路径 '/add_note/'
+    if (referrer && referrer.includes('/add_note/')) {
+        window.history.go(-3);
+    } else {
+        window.location.href = '/';
+    }
+}
+
+
+
+
+function saveNewOrder() { 
+    window._states = {}; 
+    renderCards(); 
+    setupIntersectionObserver(); // 【关键】：重新渲染后必须重新开启观察器
+    closeSortModal(); 
+}
+
+// --- 初始化启动 ---
+init();
+setupTrayDrop();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ lang_dict['title'] }}</title>
+<style>
+/* --- 1. 基础变量与全局样式 (完全保留你的设计) --- */
+:root { --primary-color: #e67e22; --primary-hover: #d35400; --light-orange: #fef5ed; --border-orange: #fad7a0; --text-dark: #2c3e50; --bg-gray: #f4f4f9; --empty-note-bg: #fce8e6; }
+body { font-family: sans-serif; margin: 40px; background: var(--bg-gray); color: var(--text-dark); }
+h1 { margin-bottom: 20px; }
+.brand-link { text-decoration: none; color: inherit; display: inline-block; }
+.nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.search-box { position: relative; display: inline-block; }
+.search-box input { padding: 10px 35px 10px 10px; width: 300px; border: 2px solid #ddd; border-radius: 6px; outline: none; transition: border-color 0.3s; }
+.search-box input:focus { border-color: var(--primary-color); }
+.clear-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #ccc; font-size: 22px; line-height: 1;  user-select: none; transition: color 0.2s; }
+.clear-btn.hidden { display: none !important; }
+.search-box:hover .clear-btn, .search-box input:focus + .clear-btn { display: block; }
+.clear-btn:hover { color: #e74c3c; }
+
+/* --- 分组卡片样式 --- */
+.group-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.3s ease; text-decoration: none; color: inherit; display: block; border: 1px solid #eee; }
+.group-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: var(--primary-color); }
+.group-title { font-size: 1.2em; font-weight: bold; color: var(--primary-color); display: block; margin-bottom: 10px; }
+.count { font-size: 0.9em; color: #888; }
+
+/* --- 搜索结果样式 --- */
+#search-results-section { display: none; }
+/* --- 修改后的快捷分组样式 (限制最多三行) --- */
+.chips-container { 
+    margin-bottom: 20px; 
+    display: flex; 
+    flex-wrap: wrap;          /* 保留换行功能 */
+    gap: 10px; 
+    align-items: center; 
+    
+    /* --- 【核心限制逻辑】 --- */
+    max-height: 105px;        /* 【关键】限制最大高度。
+                                 计算公式：Chip高度(约32px) + 间距(10px) + 标题/Padding空间 = 约 100-110px。
+                                 这样刚好能容纳三行，第四行会被切掉。 */
+    overflow-y: auto;         /* 如果超过三行，允许用户垂直滚动查看更多 */
+    overflow-x: hidden;       /* 禁止横向滚动 */
+    
+    padding-right: 5px;       /* 为右侧垂直滚动条留点呼吸空间 */
+}
+
+/* 美化一下那个微小的纵向滚动条，让它不那么突兀 */
+.chips-container::-webkit-scrollbar {
+    width: 4px;               /* 极细的滚动条 */
+}
+.chips-container::-webkit-scrollbar-thumb {
+    background: var(--border-orange); 
+    border-radius: 10px;
+}
+.chips-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* 确保 Chip 不会因为容器高度限制而变形 */
+.chip {
+    flex: 0 0 auto;           /* 禁止挤压，保持内容宽度 */
+    background: var(--light-orange); 
+    color: var(--primary-color); 
+    padding: 6px 14px; 
+    border-radius: 20px; 
+    font-size: 14px; 
+    font-weight: 500; 
+    text-decoration: none; 
+    transition: all 0.2s ease; 
+    border: 1px solid var(--border-orange);
+}
+
+.chip:hover { background: var(--primary-color); color: white; transform: scale(1.05); }
+
+table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); table-layout: fixed; }
+th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; }
+th { background-color: #f8f9fa; color: #666; font-size: 13px; font-weight: 600; }
+.notes-cell-index { font-size: 14px; line-height: 1.5; white-space: normal; overflow-wrap: break-word; }
+.tag-badge-small { display: inline-flex; align-items: center; background: #fff3e0; color: #e67e22; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-right: 4px; margin-bottom: 4px; border: 1px solid #ffe0b2; font-weight: bold; }
+.action-cell { text-align: center !important; width: 130px; }
+.btn { padding: 5px 10px; text-decoration: none; border-radius: 4px; font-size: 12px; display: inline-block; transition: all 0.2s; font-weight: 500; }
+.btn-view { background: var(--primary-color); color: white; }
+.btn-edit { background: #ffc107; color: black; margin-left: 4px; }
+.no-notes { background-color: var(--empty-note-bg) !important; }
+.empty-msg { padding: 40px; text-align: center; color: #999; font-style: italic; }
+
+/* --- 【核心修改】Section Header & Layout --- */
+.section-header { 
+    display: flex; 
+    justify-content: flex-start; /* 改为靠左对齐 */
+    align-items: center; 
+    margin-bottom: 1px; 
+}
+
+/* 将标题和计数器包装成一个整体，紧贴左侧 */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* 控制排序框的位置：既不靠最右，也不紧挨着标题 */
+.sort-container { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    margin-left: 40px; /* 通过左边距控制它相对于标题的位置 */
+    padding-left: 15px; 
+    border-left: 1px solid #e0e0e0; 
+}
+
+.sort-label { font-size: 13px; color: #666; }
+.sort-select { padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; outline: none; font-size: 13px; cursor: pointer; background-color: white; color: #555; transition: all 0.2s ease; }
+
+/* --- 其他样式保持不变 --- */
+.total-badge { background: var(--primary-color); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; white-space: nowrap; }
+.lang-switcher { display: flex; background: #eee; padding: 4px; border-radius: 30px; }
+.lang-link { padding: 6px 16px; text-decoration: none; font-size: 14px; font-weight: 500; border-radius: 25px; color: #666; transition: all 0.3s ease; }
+.lang-link.active { background: var(--primary-color); color: white !important; box-shadow: 0 2px 6px rgba(230, 126, 34, 0.3); }
+.favicon-mini { width: 14px; height: 14px; vertical-align: super; margin-left: 3px; display: inline-block; }
+.section-divider { grid-column: 1 / -1; width: 100%; display: flex; align-items: center; margin: 25px 0 15px 0; }
+.divider-line { flex-grow: 1; height: 1px; background: #e0e0e0; }
+.divider-text { padding: 0 15px; font-size: 14px; font-weight: bold; color: var(--primary-color); background: var(--bg-gray); padding-top: 2px; padding-bottom: 2px; }
+.group-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+.suggestion-box { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 0 0 6px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 300px; overflow-y: auto; display: none; z-index: 9999; }
+.suggestion-item { padding: 10px 15px; cursor: pointer; font-size: 14px; color: var(--text-dark); border-bottom: 1px solid #f9f9f9; display: flex; align-items: center; transition: background 0.2s; }
+.suggestion-item:hover { background-color: var(--light-orange); color: var(--primary-color); }
+.suggestion-type { font-size: 10px; color: #aaa; margin-right: 8px; font-weight: normal; text-transform: uppercase; border: 1px solid #eee; padding: 1px 4px; border-radius: 3px; }
+
+/* --- 极小使用的引导链接样式 --- */
+.tiny-guide-link {
+    position: fixed;         /* 固定在屏幕上，不随页面滚动 */
+    top: 10px;               /* 距离顶部 10px */
+    left: 10px;              /* 距离左侧 10px */
+    font-size: 10px;         /* 非常小的字体 */
+    color: #eba56b;          /* 浅灰色 (带一点点灰调) */
+    text-decoration: none;   /* 去掉下划线 */
+    z-index: 9999;           /* 确保它永远在最顶层 */
+    transition: all 0.3s ease; /* 平滑过渡动画 */
+    opacity: 0.6;            /* 默认半透明，不抢眼 */
+}
+
+.tiny-guide-link:hover {
+    color: var(--primary-color); /* 鼠标移上去变为主题橙色 */
+    opacity: 1;                  /* 变得清晰 */
+    transform: translateX(3px);  /* 极其轻微的向右滑动效果，增加互动感 */
+}
+
+</style>
+</head>
+<body id="body">
+
+    <a href="https://nqy-exp.github.io/niu/" target="_blank" rel="noopener noreferrer" class="tiny-guide-link">
+    {{ lang_dict['user_guide'] }}
+</a>
+
+
+<!-- 【核心修复】监听 BFCache，解决返回页面数据不更新/显示错误的问题 -->
+<script>
+window.addEventListener('pageshow', function(event) {
+    // 如果页面是从浏览器缓存中“复活”的，强制重新加载以获取最新数据库状态
+    if (event.persisted) {
+        console.log("检测到从缓存加载，正在强制刷新以同步最新数据...");
+        window.location.reload();
+    }
+});
+</script>
+
+<div class="nav-bar">
+    <h1 style="margin:0;"><a href="/" class="brand-link">🔬 {{ lang_dict['title'] }}<img src="/assets/favicon-180x180.png" class="favicon-mini"></a></h1>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="{{ lang_dict['search_placeholder'] }}" value="{{ request.args.get('q', '') }}" autocomplete="off"> 
+        <span id="clearSearchBtn" class="clear-btn">&times;</span>
+        <div id="suggestionBox" class="suggestion-box"></div>
+    </div>
+    <div class="lang-switcher">
+        <a href="javascript:void(0);" onclick="switchLanguage('zh')" class="lang-link {{ 'active' if current_lang == 'zh' else '' }}">中文</a>
+        <a href="javascript:void(0);" onclick="switchLanguage('en')" class="lang-link {{ 'active' if current_lang == 'en' else '' }}">English</a>
+    </div>
+</div>
+
+<a href="/import" class="btn btn-edit" style="background: #3498db; color: white; float: right; margin-top: 16px; ">
+  📥 {{ lang_dict['btn_import'] }}
+</a>
+<a href="/compare_index" class="btn btn-edit" style="position: absolute; right: 0; top: 0;">{{ lang_dict['compare_mode_title'] }}</a>
+
+<!-- 分组目录部分 -->
+<div id="directory-section">
+    <div class="section-header">
+        <!-- 【布局优化】标题和数字标签组合成左侧整体 -->
+        <div class="header-left">
+            <h2 class="section-title" id="dirTitle">{{ lang_dict['dir_title'] }}</h2>
+            <span id="totalCountBadge" class="total-badge">0 {{ lang_dict['count_files'].replace('{}', '') }}</span>
+        </div>
+
+        <!-- 【布局优化】排序控件移至右侧，但通过 margin 控制间距 -->
+        <div class="sort-container">
+            <label for="sortSelect" class="sort-label">{{ lang_dict['sort_label'] }}</label>
+            <select id="sortSelect" class="sort-select">
+                <option value="default">{{ lang_dict['sort_default'] }}</option>
+                <option value="alpha_asc">{{ lang_dict['sort_alpha_asc'] }}</option>
+                <option value="alpha_desc">{{ lang_dict['sort_alpha_desc'] }}</option>
+                <option value="date_asc">{{ lang_dict['sort_date_asc'] }}</option>
+                <option value="date_desc">{{ lang_dict['sort_date_desc'] }}</option>
+            </select>
+        </div>
+    </div>
+    <div class="group-container" id="groupContainer"></div>
+</div>
+
+<!-- 搜索结果部分 -->
+<div id="search-results-section">
+    <h2 id="search-title">🔍 </h2>
+    <div id="chipsContainer" class="chips-container"></div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">{{ lang_dict['filename_header'] }}</th>
+                <th style="width: 45%;">{{ lang_dict['notes_label'] }}</th>
+                <th style="width: 10%;">Tags</th>
+                <th style="width: 10%;">{{ lang_dict['date_label'] }}</th>
+                <th style="width: 15%;">{{ lang_dict['action_label'] }}</th>
+            </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+    </table>
+    <div id="noResults" class="empty-msg">{{ lang_dict['no_results'] }}</div>
+</div>
+
+<!-- 数据存储容器 -->
+<script id="display-data-holder" type="application/json">{{ all_items_json | safe }}</script>
+<script id="library-data-holder" type="application/json">{{ library_json | safe }}</script>
+<script id="lang-holder" type="application/json">{{ lang_dict | tojson }}</script>
+
+<script>
+// 1. 初始化数据
+const CURRENT_DISPLAY_DATA = JSON.parse(document.getElementById('display-data-holder').textContent);
+const FULL_LIBRARY = JSON.parse(document.getElementById('library-data-holder').textContent);
+const LANG_DICT = JSON.parse(document.getElementById('lang-holder').textContent);
+
+// 核心 Map 用于查找
+const DATA_MAP = new Map(CURRENT_DISPLAY_DATA.map(item => [item.filename, item]));
+
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+const directorySection = document.getElementById('directory-section');
+const searchResultsSection = document.getElementById('search-results-section');
+const groupContainer = document.getElementById('groupContainer');
+const resultsBody = document.getElementById('resultsBody');
+const noResults = document.getElementById('noResults');
+const searchTitle = document.getElementById('search-title');
+const totalCountBadge = document.getElementById('totalCountBadge'); 
+const chipsContainer = document.getElementById('chipsContainer');
+const sortSelect = document.getElementById('sortSelect');
+const suggestionBox = document.getElementById('suggestionBox');
+
+let UNIQUE_TAGS = [];
+let debounceTimer = null;
+
+// --- 初始化函数 ---
+function init() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryFromUrl = urlParams.get('q');
+    const sortFromUrl = urlParams.get('sort') || 'default';
+    sortSelect.value = sortFromUrl;
+
+    // 初始化联想用的标签库
+    const tagSet = new Set();
+    FULL_LIBRARY.forEach(item => { if (item.tags) item.tags.forEach(t => tagSet.add(t)); });
+    UNIQUE_TAGS = Array.from(tagSet);
+
+    if (queryFromUrl) {
+        directorySection.style.display = 'none';
+        searchResultsSection.style.display = 'block';
+        searchTitle.innerText = LANG_DICT['search_title'].replace('{query}', queryFromUrl);
+
+        // 异步请求真正的搜索结果
+        fetch(`/api/search?q=${encodeURIComponent(queryFromUrl)}&sort=${sortFromUrl}`)
+            .then(response => response.json())
+            .then(data => {
+                renderResults(data); 
+            })
+            .catch(err => console.error("Initial search error:", err));
+
+    } else {
+        directorySection.style.display = 'block';
+        searchResultsSection.style.display = 'none';
+        totalCountBadge.innerText = `${CURRENT_DISPLAY_DATA.length} ${LANG_DICT['count_files'].replace('{}', '')}`;
+        renderGroupedDirectory(sortFromUrl);
+    }
+}
+
+// --- 核心渲染逻辑：分组目录 ---
+function renderGroupedDirectory(mode) {
+    groupContainer.innerHTML = '';
+    if (!CURRENT_DISPLAY_DATA || CURRENT_DISPLAY_DATA.length === 0) {
+        groupContainer.innerHTML = `<p class="empty-msg">${LANG_DICT['empty_msg']}</p>`;
+        return;
+    }
+
+    const groupsMap = {};
+    CURRENT_DISPLAY_DATA.forEach(item => {
+        const p = item.prefix || "未分类";
+        if (!groupsMap[p]) groupsMap[p] = [];
+        groupsMap[p].push(item);
+    });
+
+    let groupList = Object.keys(groupsMap).map(prefix => {
+        const items = groupsMap[prefix];
+        const alphaKey = prefix.charAt(0).toUpperCase();
+        let dateKey = "未知";
+        const dates = items.map(i => i.experiment_date).filter(d => d && d !== '-');
+        if (dates.length > 0) {
+            const latestDate = [...dates].sort().reverse()[0];
+            dateKey = latestDate.substring(0, 7); 
+        }
+        return { prefix, items, alphaKey, dateKey };
+    });
+
+    // 排序逻辑
+    if (mode === 'alpha_asc') groupList.sort((a, b) => a.alphaKey.localeCompare(b.alphaKey));
+    else if (mode === 'alpha_desc') groupList.sort((a, b) => b.alphaKey.localeCompare(a.alphaKey));
+    else if (mode === 'date_asc') groupList.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+    else if (mode === 'date_desc') groupList.sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+
+    let currentSectionKey = null;
+    groupList.forEach(group => {
+        let sectionLabel = "";
+        if (mode.startsWith('alpha')) sectionLabel = group.alphaKey;
+        else if (mode.startsWith('date')) sectionLabel = group.dateKey;
+
+        if (sectionLabel !== currentSectionKey) {
+            currentSectionKey = sectionLabel;
+            const divider = document.createElement('div');
+            divider.className = 'section-divider';
+            let displayContent = (mode === 'default') ? `<img src="/assets/favicon-180x180.png" class="favicon-mini">` : sectionLabel;
+            divider.innerHTML = `<div class="divider-line"></div><div class="divider-text">${displayContent}</div><div class="divider-line"></div>`;
+            groupContainer.appendChild(divider);
+        }
+
+        const card = document.createElement('a');
+        card.className = 'group-card';
+        card.href = `/prefix/${encodeURIComponent(group.prefix)}`;
+        card.innerHTML = `<span class="group-title">${group.prefix}</span><span class="count">${group.items.length} ${LANG_DICT['count_files'].replace('{}', '')}</span>`;
+        groupContainer.appendChild(card);
+    });
+}
+
+// --- 核心渲染逻辑：搜索结果表格 ---
+function renderResults(results) {
+    resultsBody.innerHTML = '';
+    if (results.length === 0) { noResults.style.display = 'block'; return; }
+    noResults.style.display = 'none';
+
+    results.forEach(item => {
+        const tr = document.createElement('tr');
+        if (!item.notes && (!item.tags || item.tags.length === 0)) tr.className = 'no-notes';
+        let notesDisplay = item.notes ? item.notes : LANG_DICT['status_empty'];
+        let tagsHtml = (item.tags && item.tags.length > 0) ? item.tags.map(t => `<span class="tag-badge-small">#${t}</span>`).join('') : '';
+        tr.innerHTML = `
+            <td><strong>${item.display_name}</strong></td>
+            <td class="notes-cell-index">${notesDisplay}</td>
+            <td>${tagsHtml}</td> 
+            <td>${item.experiment_date || '-'}</td>
+            <td class="action-cell">
+                <a href="/view/${encodeURIComponent(item.filename)}" class="btn btn-view">${LANG_DICT['btn_view']}</a>
+                <a href="/add_note/${encodeURIComponent(item.filename)}" class="btn btn-edit">${LANG_DICT['btn_edit']}</a>
+            </td>`;
+        resultsBody.appendChild(tr);
+    });
+    renderChips(results);
+}
+
+// --- 快速跳转 Chips ---
+function renderChips(results) {
+    chipsContainer.innerHTML = ''; 
+    if (results.length === 0) return;
+    const uniquePrefixes = [...new Set(results.map(item => item.prefix))].sort();
+    if (uniquePrefixes.length > 0) {
+        const label = document.createElement('span');
+        label.className = 'chips-label';
+        label.innerText = LANG_DICT['quick_jump'];
+        chipsContainer.appendChild(label);
+        uniquePrefixes.forEach(prefix => {
+            const chip = document.createElement('a');
+            chip.className = 'chip';
+            let targetUrl = `/prefix/${encodeURIComponent(prefix)}`;
+            if (searchInput.value) targetUrl += `?q=${encodeURIComponent(searchInput.value)}`;
+            chip.href = targetUrl;
+            chip.innerText = prefix;
+            chipsContainer.appendChild(chip);
+        });
+    }
+}
+
+// --- 输入事件监听器 ---
+searchInput.addEventListener('input', function() {
+    const query = this.value.trim();
+
+    if (query.length > 0) {
+        clearSearchBtn.style.display = 'block';
+    } else {
+        clearSearchBtn.style.display = 'none';
+    }
+
+    updateSuggestions(query);
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        if (typeof sortSelect === 'undefined' || sortSelect === null) return; 
+
+        if (query === "") {
+            // 情况 A：搜索词为空 -> 回到目录模式
+            directorySection.style.display = 'block';
+            searchResultsSection.style.display = 'none';
+            const url = new URL(window.location.href);
+            url.searchParams.delete('q');
+            window.history.replaceState({}, '', url.toString());
+
+            // 【核心修复】：清空搜索后，必须重新渲染整个目录
+            renderGroupedDirectory(sortSelect.value);
+            totalCountBadge.innerText = `${CURRENT_DISPLAY_DATA.length} ${LANG_DICT['count_files'].replace('{}', '')}`;
+        } else {
+            // 情况 B：有搜索词 -> 发起异步请求
+            try {
+                fetch(`/api/search?q=${encodeURIComponent(query)}&sort=${sortSelect.value}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error("HTTP error! Status: " + response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        directorySection.style.display = 'none';
+                        searchResultsSection.style.display = 'block';
+                        searchTitle.innerText = LANG_DICT['search_title'].replace('{query}', query);
+                        renderResults(data); 
+
+                        const newUrl = new URL(window.location.origin + window.location.pathname);
+                        newUrl.searchParams.set('q', query);
+                        if (sortSelect.value !== 'default') {
+                            newUrl.searchParams.set('sort', sortSelect.value);
+                        }
+                        window.history.replaceState({}, '', newUrl.toString());
+                    })
+                    .catch(err => { console.error("Fetch Error:", err); });
+            } catch (e) {
+                console.error("Search Setup Error:", e);
+            }
+        }
+    }, 400);
+});
+
+// 清除按钮
+clearSearchBtn.addEventListener('click', function() {
+    searchInput.value = ''; 
+    searchInput.dispatchEvent(new Event('input')); 
+    searchInput.focus();
+});
+
+// --- 联想功能 ---
+function updateSuggestions(query) {
+    if (!query.trim()) { suggestionBox.style.display = 'none'; return; }
+    const trimmedQuery = query.trim().toLowerCase();
+    const isTagMode = trimmedQuery.startsWith('#'); 
+    let suggestions = [];
+
+    if (isTagMode) {
+        const term = trimmedQuery.substring(1); 
+        UNIQUE_TAGS.forEach(tag => {
+            if (tag.toLowerCase().includes(term)) suggestions.push({ type: 'Tag', value: `#${tag}`, displayName: `#${tag}`, isTag: true });
+        });
+    } else {
+        FULL_LIBRARY.forEach(item => {
+            if (suggestions.length >= 6) return;
+            if (item.filename.toLowerCase().includes(trimmedQuery)) {
+                suggestions.push({ type: 'File', value: item.filename, displayName: item.display_name, isTag: false });
+            } else if (item.tags && item.tags.some(t => t.toLowerCase().includes(trimmedQuery))) {
+                const matched = item.tags.find(t => t.toLowerCase().includes(trimmedQuery));
+                if (matched) suggestions.push({ type: 'Tag', value: `#${matched}`, displayName: `#${matched}`, isTag: true });
+            }
+        });
+    }
+
+    if (suggestions.length > 0) {
+        suggestionBox.innerHTML = suggestions.map(s => `
+            <div class="suggestion-item" data-value="${s.value}" data-display="${s.displayName}" data-is-tag="${s.isTag}">
+                <span class="suggestion-type">${s.type}</span><span>${s.displayName}</span>
+            </div>`).join('');
+        suggestionBox.style.display = 'block';
+    } else {
+        suggestionBox.style.display = 'none';
+    }
+}
+
+suggestionBox.addEventListener('click', function(e) {
+    const item = e.target.closest('.suggestion-item');
+    if (!item) return;
+    let valForUrl = item.getAttribute('data-value'); 
+    let displayVal = item.getAttribute('data-display'); 
+    const isTag = item.getAttribute('data-is-tag') === 'true';
+
+    if (isTag && !valForUrl.startsWith('#')) valForUrl = '#' + valForUrl;
+
+    searchInput.value = displayVal;
+    suggestionBox.style.display = 'none';
+    window.location.href = `/?q=${encodeURIComponent(valForUrl)}`; 
+});
+
+document.addEventListener('click', (e) => { if(!e.target.closest('.search-box')) suggestionBox.style.display='none'; });
+
+// --- 语言切换 ---
+function switchLanguage(newLang) {
+    const currentFullUrl = window.location.pathname + window.location.search;
+    window.location.href = `/set_lang/${newLang}?next=${encodeURIComponent(currentFullUrl)}`;
+}
+
+sortSelect.addEventListener('change', function() {
+    const url = new URL(window.location.href);
+    if (this.value !== 'default') url.searchParams.set('sort', this.value);
+    else url.searchParams.delete('sort');
+    window.location.href = url.toString();
+});
+
+init();
+</script>
+</body>
+</html>

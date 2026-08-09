@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ lang_dict['title'] }} - {{ filename }}</title>
+<style>
+/* 定义全局主题变量 - 与 index 保持完全一致 */
+:root {
+    --primary-color: #e67e22;       /* 主题橙色 */
+    --primary-hover: #d35400;      /* 深橙色 */
+    --light-orange: #fef5ed;       /* 极浅橙色 */
+    --text-dark: #2c3e50;
+    --bg-gray: #f4f4f9;
+}
+
+body { 
+    font-family: sans-serif;
+    margin: 0; 
+    padding: 15px;
+    background: var(--bg-gray); 
+    text-align: center; 
+}
+
+/* 主容器 */
+.content { 
+    background: white; 
+    padding: 15px 25px; /* 压缩内部间距 */
+    border-radius: 10px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
+    max-width: 1100px; /* 适合电脑屏幕的大宽度 */
+    margin: 0 auto 40px auto; 
+}
+
+/* --- 顶部标题与按钮栏 (Header Bar) --- */
+.header-bar {
+    display: grid;
+    /* 创建三列：左侧自适应，中间根据按钮大小自适应，右侧自适应 */
+    /* 1fr 表示两边的空间平分，从而把中间部分挤到正中心 */
+    grid-template-columns: 1fr auto 1fr; 
+    align-items: center;           
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+
+/* 确保标题左对齐 */
+.header-title {
+    margin: 0;
+    font-size: 1.3em;
+    color: var(--text-dark);
+    text-align: left; 
+}
+
+/* 中间容器：自动居中 */
+.center-action {
+    justify-self: center; /* Grid 特有属性：让元素在单元格内水平居中 */
+}
+
+/* 右侧操作组：确保按钮靠右对齐 */
+.top-actions {
+    display: flex;
+    justify-content: flex-end; /* 让按钮组靠右显示 */
+    gap: 10px;
+}
+
+/* 按钮样式 */
+.btn {
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+.btn-back {  text-decoration: none;         /* 去掉下划线 */
+    background: var(--light-orange); /* 浅橙色背景 */
+    color: var(--primary-color);    /* 深橙色文字 */
+    padding: 8px 16px;             /* 增加内边距，做成“框”的感觉 */
+    border-radius: 6px;            /* 圆角 */
+    font-size: 14px;
+    font-weight: bold;
+    border: 1px solid var(--border-orange); /* 橙色细边框 */
+    transition: all 0.3s ease;     /* 悬停动画 */}
+.btn-back:hover { background: var(--primary-color); /* 悬停时背景变深 */
+    color: white;                     /* 悬停时文字变白 */
+    box-shadow: 0 2px 8px rgba(230, 126, 34, 0.3); }
+
+/* 修改：修改按钮改为主题橙色 */
+.btn-edit { 
+    background: var(--primary-color); 
+    color: white; 
+}
+.btn-edit:hover { 
+    background: var(--primary-hover); 
+}
+
+/* --- 缩放控制区 --- */
+.controls { 
+    margin: 10px 0; 
+    padding: 7px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+input[type=range] { width: 200px; cursor: pointer; accent-color: var(--primary-color); }
+.zoom-number-input { 
+    width: 60px; 
+    padding: 8px; 
+    border: 1px solid #ddd; 
+    border-radius: 4px; 
+    text-align: center; 
+    outline: none;
+}
+.zoom-number-input:focus { border-color: var(--primary-color); }
+
+/* 图片展示区域 */
+.image-wrapper {
+    width: 100%;
+    overflow: visible; /* 允许图片放大超出容器 */
+    display: flex;
+    justify-content: center;
+}
+
+#mainImage { 
+    transition: width 0.1s ease-out; 
+    width: 35%; /* 初始默认大小 */
+    height: auto; /* 保持等比例缩放的核心 */
+    display: block;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+}
+
+/* --- 信息展示区 --- */
+.info-section { text-align: left; padding-top: 3px;margin-bottom: 10px; /* 压缩间距 */ }
+.date-tag { color: #666; font-size: 1em; margin-bottom: 5px; }
+.notes-title { font-weight: bold; display: block; margin-bottom: 8px; color: #444; }
+
+/* 修改：备注左侧边框改为主题橙色 */
+.notes-text { 
+    background: #fcfcfc; 
+    padding: 15px; 
+    border-left: 5px solid var(--primary-color); 
+    white-space: pre-wrap; 
+    min-height: 30px;
+    font-size: 1em;
+    line-height: 1.6;
+}
+
+/* 调试与错误提示 */
+.debug-info { text-align: left; background: #fff3f3; color: #d9534f; padding: 10px; margin-top: 20px; font-size: 12px; border: 1px dashed #d9534f; }
+#errorMsg { color: white; padding: 50px; background: #333; width: 100%; }
+
+/* 底部链接 */
+.footer-links { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+.footer-links a { color: var(--primary-color); text-decoration: none; font-size: 14px; margin: 0 15px; }
+.footer-links a:hover { text-decoration: underline; }
+
+/* 标签胶囊样式 - 紧凑版 */
+.view-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.view-tag-badge {
+    background: var(--light-orange);
+    color: var(--primary-color);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    border: 1px solid var(--border-orange);
+}
+
+/* 新增：返回上一页按钮样式 */
+.btn-back-prev {
+    background: var(--light-orange);
+    color: var(--primary-color);
+    border: 1px solid var(--border-orange);
+}
+
+/* 新增：回到主页按钮样式 (可以稍微区分一下，比如用实心橙色) */
+.btn-back-home {
+    background: var(--text-dark);
+    color: white;
+}
+.btn-back-home:hover {
+    background: #000;
+}
+/* --- 极小使用的引导链接样式 --- */
+.tiny-guide-link {
+    position: fixed;         /* 固定在屏幕上，不随页面滚动 */
+    top: 10px;               /* 距离顶部 10px */
+    left: 10px;              /* 距离左侧 10px */
+    font-size: 10px;         /* 非常小的字体 */
+    color: #eba56b;          /* 浅灰色 (带一点点灰调) */
+    text-decoration: none;   /* 去掉下划线 */
+    z-index: 9999;           /* 确保它永远在最顶层 */
+    transition: all 0.3s ease; /* 平滑过渡动画 */
+    opacity: 0.6;            /* 默认半透明，不抢眼 */
+}
+
+.tiny-guide-link:hover {
+    color: var(--primary-color); /* 鼠标移上去变为主题橙色 */
+    opacity: 1;                  /* 变得清晰 */
+    transform: translateX(3px);  /* 极其轻微的向右滑动效果，增加互动感 */
+}
+
+
+</style>
+</head>
+<body id="body">
+
+<a href="https://nqy-exp.github.io/niu/" target="_blank" rel="noopener noreferrer" class="tiny-guide-link">
+    {{ lang_dict['user_guide'] }}
+</a>
+
+    <!-- 顶部栏 -->
+<!-- 修改后的顶部栏结构 -->
+<div class="header-bar">
+    <!-- 第一部分：左侧标题 -->
+    <h1 class="header-title">{{ filename }}</h1>
+
+    <!-- 第二部分：中间按钮 (现在它是 header-bar 的直接子元素了) -->
+    <div class="center-action">
+        <a href="/" class="btn btn-back-home">{{ lang_dict['btn_back_index'] }}</a>
+    </div>
+
+    <!-- 第三部分：右侧操作组 -->
+   <div class="top-actions">
+    <!-- 不管从哪来，直接执行浏览器的“后退”操作 -->
+  <!-- 修改后的智能返回按钮 -->
+<a href="javascript:void(0);" onclick="smartBack()" class="btn btn-back-prev">
+    {{ lang_dict['btn_back_prev'] }}
+</a>
+
+<script>
+function smartBack() {
+    // 获取来源页面的 URL
+    const referrer = document.referrer;
+
+    // 判断来源页面是否包含编辑路径 '/add_note/'
+    // 注意：这里的路径必须和你 index 代码里 edit 按钮的 href 路径一致
+    if (referrer && referrer.includes('/add_note/')) {
+        // 如果是从编辑页跳过来的，直接后退两步，跳过编辑页，回到列表页
+        window.history.go(-3);
+    } else {
+        // 否则，执行正常的后退一步
+        window.history.back();
+    }
+}
+</script>
+
+    <a href="/add_note/{{ filename }}" class="btn btn-edit">{{ lang_dict['btn_edit'] }}</a>
+   </div>
+
+</div>
+
+    
+<div class="content">
+    <!-- 信息展示区 -->
+    <div class="info-section">
+        <div class="date-tag">{{ lang_dict['date_label'] }} {{ exp_date if exp_date else lang_dict['exp_date_none'] }}</div>
+        <span class="notes-title">{{ lang_dict['notes_label'] }}</span>
+        <div class="notes-text">{{ notes if notes else '' }}</div>
+        
+        {% if tags %}
+    <div class="view-tags-container">
+        {% for tag in tags %}
+            <span class="view-tag-badge">#{{ tag }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+    </div>
+ 
+
+
+    <!-- 缩放控制区 -->
+    <div class="controls">
+        <label for="zoomSlider">{{ lang_dict['zoom_label'][:5] }}</label> 
+        <input type="range" id="zoomSlider" min="10" max="500" value="35">
+        <input type="number" id="zoomNumber" class="zoom-number-input" min="10" max="500" value="35">
+        <span id="zoomValue">35%</span>
+    </div>
+
+    <!-- 图片展示区 -->
+    <div class="image-wrapper">
+        <img src="/images/{{ filename }}" id="mainImage" onerror="handleError()">
+        <div id="errorMsg" style="display:none;">
+            ❌ {{ lang_dict['no_results'] }}
+        </div>
+    </div>
+
+    <!-- 调试信息 -->
+    <div id="debugBox" class="debug-info" style="display: none;">
+        <strong>🛠️ 调试诊断信息:</strong><br>
+        尝试访问的 URL: <code id="debugUrl"></code>
+    </div>
+
+
+</div>
+
+<script>
+const slider = document.getElementById('zoomSlider');
+const numInput = document.getElementById('zoomNumber');
+const img = document.getElementById('mainImage');
+const zoomText = document.getElementById('zoomValue');
+const errorMsg = document.getElementById('errorMsg');
+const debugBox = document.getElementById('debugBox');
+const debugUrl = document.getElementById('debugUrl');
+
+// 统一的缩放更新函数
+function updateZoom(val, source) {
+    if (val < 10) val = 10;
+    if (val > 500) val = 500;
+
+    img.style.width = val + '%';
+    zoomText.innerText = val + '%';
+
+    // 同步两个输入控件
+    if (source === 'slider') {
+        numInput.value = val;
+    } else if (source === 'input') {
+        slider.value = val;
+    }
+}
+
+// 监听滑块拖动
+slider.addEventListener('input', function() {
+    updateZoom(parseInt(this.value), 'slider');
+});
+
+// 监听数字框输入
+numInput.addEventListener('input', function() {
+    let val = parseInt(this.value);
+    if (!isNaN(val)) {
+        updateZoom(val, 'input');
+    }
+});
+
+// 图片加载失败处理
+function handleError() {
+    errorMsg.style.display = 'block';
+    debugBox.style.display = 'block';
+    debugUrl.innerText = window.location.origin + '/images/{{ filename }}';
+}
+
+// 监听页面显示事件
+window.addEventListener('pageshow', function(event) {
+    // event.persisted 为 true 表示页面是从浏览器缓存 (bfcache) 中恢复的
+    if (event.persisted) {
+        console.log("检测到从缓存加载，正在刷新数据...");
+        window.location.reload();
+    }
+});
+
+</script>
+
+</body>
+</html>

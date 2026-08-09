@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ lang_dict['title'] }} - {{ filename }}</title>
+<style>
+:root {
+--primary-color: #e67e22;       
+--primary-hover: #d35400;      
+--light-orange: #fef5ed;       
+--border-orange: #fad7a0;      
+--text-dark: #2c3e50;
+--bg-gray: #f4f4f9;
+}
+
+body { font-family: sans-serif; margin: 40px; background: var(--bg-gray); color: var(--text-dark); }
+.container { background: white; padding: 30px; border-radius: 8px; max-width: 500px; margin: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+label { display: block; margin-top: 15px; font-weight: bold; color: #444; }
+input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
+
+/* --- 提交按钮状态 --- */
+button[type="submit"] { 
+width: 100%; padding: 12px; background: var(--primary-color); color: white; 
+border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; font-size: 16px; transition: all 0.3s ease;
+}
+
+/* 已保存状态：淡橙色边框 */
+button[type="submit"].is-saved {
+background: var(--light-orange);
+color: var(--primary-color);
+border: 1px solid var(--border-orange);
+}
+
+button[type="submit"]:hover:not(.is-saved) { background: var(--primary-hover); }
+button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* 提示信息 */
+#saveStatusMsg { margin-top: 15px; padding: 10px; border-radius: 4px; text-align: center; font-size: 14px; display: none; }
+.msg-success { background: #dff0d8; color: #3c763d; display: block !important; }
+.msg-error { background: #f2dede; color: #a94442; display: block !important; }
+
+/* 其他样式 */
+.back-link { display: block; margin-top: 20px; color: #e67e22; text-decoration: none; font-size: 14px; text-align: center; cursor: pointer; }
+.tag-input-container { background: white; border: 2px solid #ddd; border-radius: 6px; padding: 5px 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 45px; }
+#tagInput { border: none !important; outline: none !important; padding: 5px 0; font-size: 14px; width: 100%; }
+.tag-badge { background: var(--light-orange); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 5px; border: 1px solid var(--border-orange); }
+.remove-tag { cursor: pointer; font-weight: bold; color: #e74c3c; font-size: 16px; line-height: 1; margin-left: 2px; }
+.tags-list { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+
+.tag-input-wrapper { 
+flex: 0 0 100%; 
+display: flex; 
+align-items: center; 
+}
+/* --- 极小使用的引导链接样式 --- */
+.tiny-guide-link {
+    position: fixed;         /* 固定在屏幕上，不随页面滚动 */
+    top: 10px;               /* 距离顶部 10px */
+    left: 10px;              /* 距离左侧 10px */
+    font-size: 10px;         /* 非常小的字体 */
+    color: #eba56b;          /* 浅灰色 (带一点点灰调) */
+    text-decoration: none;   /* 去掉下划线 */
+    z-index: 9999;           /* 确保它永远在最顶层 */
+    transition: all 0.3s ease; /* 平滑过渡动画 */
+    opacity: 0.6;            /* 默认半透明，不抢眼 */
+}
+
+.tiny-guide-link:hover {
+    color: var(--primary-color); /* 鼠标移上去变为主题橙色 */
+    opacity: 1;                  /* 变得清晰 */
+    transform: translateX(3px);  /* 极其轻微的向右滑动效果，增加互动感 */
+}
+
+</style>
+</head>
+<body id="body">
+
+    <a href="https://nqy-exp.github.io/niu/" target="_blank" rel="noopener noreferrer" class="tiny-guide-link">
+    {{ lang_dict['user_guide'] }}
+</a>
+
+<div class="container">
+    <h2 style="color: #333;">📝 {{ lang_dict['btn_edit'] }}</h2> 
+    <p>{{ lang_dict['file_label'] }} <strong style="color: #e67e22;">{{ filename }}</strong></p>
+
+    <form id="editForm">
+        <label>{{ lang_dict['date_label'] }}</label>
+        <input type="date" name="experiment_date" value="{{ exp_date }}">
+
+        <label>{{ lang_dict['notes_label'] }}</label>
+        <textarea name="notes" rows="5" placeholder="{{ lang_dict['search_placeholder'] }}">{{ notes }}</textarea>
+
+        <label>{{ lang_dict['tags_input_hint'] }}</label>
+        <div class="tag-input-container" id="tagContainer">
+            <span class="tag-input-wrapper">
+                <input type="text" id="tagInput" placeholder="#tag..." autocomplete="off">
+            </span>
+            <div id="tagsList" class="tags-list"></div>
+        </div>
+
+        <!-- 隐藏的输入框用于提交标签 -->
+        <input type="hidden" name="tags" id="hiddenTagsInput">
+
+        <button type="submit" id="saveBtn">{{ lang_dict['btn_save'] }}</button>
+        <div id="saveStatusMsg"></div>
+    </form>
+
+    <!-- 返回按钮：调用 handleBack 函数 -->
+    <a href="javascript:void(0)" onclick="handleBack()" class="back-link">{{ lang_dict['btn_back_to_view'] }}</a>
+</div>
+
+<!-- 数据载入脚本 -->
+<script id="lang-holder" type="application/json">{{ lang_dict | tojson }}</script>
+
+<script>
+// --- 1. 初始化变量与配置 ---
+const LANG_DICT = JSON.parse(document.getElementById('lang-holder').textContent);
+const UI_STRINGS = {
+    zh: { success: '✅ 已成功保存', error: '❌ 保存失败', no_change: '⚠️ 没有检测到任何改动' },
+    en: { success: '✅ Saved Successfully', error: '❌ Save Failed', no_change: '⚠️ No changes detected' }
+};
+const currentLang = "{{ current_lang }}";
+
+// DOM 元素
+const editForm = document.getElementById('editForm');
+const tagInput = document.getElementById('tagInput');
+const tagsList = document.getElementById('tagsList');
+const hiddenTagsInput = document.getElementById('hiddenTagsInput');
+const saveBtn = document.getElementById('saveBtn');
+const saveStatusMsg = document.getElementById('saveStatusMsg');
+
+let currentTags = [];
+let isDirty = false; 
+
+// --- 2. 初始化渲染 ---
+window.onload = function() {
+    currentTags = JSON.parse('{{ tags | tojson if tags else "[]" }}');
+    renderTags();
+    updateButtonUI();
+};
+
+// --- 3. 功能函数库 ---
+
+/**
+ * 返回上一页并强制刷新，解决数据不更新的问题
+ */
+function handleBack() {
+    if (document.referrer && document.referrer !== "") {
+        window.location.href = document.referrer;
+    } else {
+        window.location.href = '/';
+    }
+}
+
+function updateButtonUI() {
+    if (isDirty) {
+        saveBtn.classList.remove('is-saved');
+    } else {
+        saveBtn.classList.add('is-saved');
+    }
+}
+
+function markAsDirty() {
+    if (!isDirty) {
+        isDirty = true;
+        updateButtonUI();
+    }
+    saveStatusMsg.style.display = 'none'; 
+}
+
+function renderTags() {
+    tagsList.innerHTML = ''; 
+    currentTags.forEach((tag, index) => {
+        const badge = document.createElement('div');
+        badge.className = 'tag-badge';
+
+        // 1. 创建标签文本部分 (安全注入)
+        const textSpan = document.createElement('span');
+        textSpan.textContent = `#${tag}`; // 使用 textContent 彻底屏蔽 HTML 解析
+
+        // 2. 创建删除按钮部分
+        const removeSpan = document.createElement('span');
+        removeSpan.className = 'remove-tag';
+        removeSpan.innerHTML = '&times;'; // 这里可以用 innerHTML，因为内容是固定的符号
+        removeSpan.onclick = (e) => {
+            e.stopPropagation(); // 防止触发可能存在的父级点击事件
+            removeTag(index);
+        };
+
+        // 3. 组装
+        badge.appendChild(textSpan);
+        badge.appendChild(removeSpan);
+        tagsList.appendChild(badge);
+    });
+    hiddenTagsInput.value = currentTags.join(',');
+}
+
+
+function removeTag(index) {
+    currentTags.splice(index, 1);
+    renderTags();
+    markAsDirty(); // 删除标签属于修改行为
+}
+
+function showStatus(msg, type) {
+    saveStatusMsg.innerText = msg;
+    saveStatusMsg.className = type === 'success' ? 'msg-success' : 'msg-error';
+    saveStatusMsg.style.display = 'block';
+    if (type === 'success') {
+        setTimeout(() => { saveStatusMsg.style.display = 'none'; }, 3000);
+    }
+}
+
+// --- 4. 事件监听器 ---
+
+// 监听输入变动
+editForm.addEventListener('input', () => {
+    markAsDirty();
+});
+
+// 标签 Enter 输入逻辑
+tagInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        let val = this.value.trim();
+        if (val.startsWith('#')) {
+            const newTag = val.substring(1);
+            if (newTag.length > 0 && !currentTags.includes(newTag)) {
+                currentTags.push(newTag);
+                renderTags();
+                markAsDirty();
+            }
+        }
+        this.value = '';
+        e.preventDefault();
+    }
+    if (e.key === 'Backspace' && this.value === '' && currentTags.length > 0) {
+        currentTags.pop();
+        renderTags();
+        markAsDirty();
+    }
+});
+
+// AJAX 提交表单
+editForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    if (!isDirty) {
+        showStatus(UI_STRINGS[currentLang].no_change, 'error');
+        return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.innerText = "...";
+
+    const formData = new FormData(editForm);
+
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => {
+        if (response.ok) {
+            isDirty = false;
+            updateButtonUI();
+            showStatus(UI_STRINGS[currentLang].success, 'success');
+        } else {
+            throw new Error('Server error');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showStatus(UI_STRINGS[currentLang].error, 'error');
+    })
+    .finally(() => {
+        saveBtn.disabled = false;
+        saveBtn.innerText = LANG_DICT['btn_save'];
+    });
+});
+</script>
+
+</body>
+</html>

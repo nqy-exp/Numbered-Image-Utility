@@ -1,0 +1,6 @@
+flask
+pandas
+openpyxl
+watchdog
+Pillow
+python-dotenv

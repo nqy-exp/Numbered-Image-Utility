@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ lang_dict['title'] }} - {{ filename }}</title>
+<style>
+/* --- 1. 保持与 view.html 完全一致的主题变量 --- */
+:root {
+--primary-color: #e67e22;       
+--primary-hover: #d35400;      
+--light-orange: #fef5ed;       
+--text-dark: #2c3e50;
+--bg-gray: #f4f4f9;
+}
+
+body { 
+font-family: sans-serif;
+margin: 0; 
+padding: 15px;
+background: var(--bg-gray); 
+text-align: center; 
+}
+
+/* --- 主容器 --- */
+.content { 
+background: white; 
+padding: 15px 25px; 
+border-radius: 10px; 
+box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
+max-width: 1100px; 
+margin: 0 auto 40px auto; 
+}
+
+/* --- 【核心修改】顶部栏：使用 Grid 实现完美的左-中-右布局 --- */
+.header-bar {
+    display: grid;
+    /* 创建三列：左侧自适应，中间根据按钮大小自适应，右侧自适应 */
+    /* 1fr 表示两边的空间平分，从而把中间部分挤到正中心 */
+    grid-template-columns: 1fr auto 1fr; 
+    align-items: center;           
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* 左侧标题 */
+.header-title {
+    margin: 0;
+    font-size: 1.3em;
+    color: var(--text-dark);
+    text-align: left; /* 确保标题靠左 */
+}
+
+/* 中间容器：实现水平居中 */
+.center-action {
+    justify-self: center; /* Grid 特有属性：让元素在单元格内水平居中 */
+}
+
+/* 右侧操作组：确保按钮靠右对齐 */
+.top-actions {
+    display: flex;
+    justify-content: flex-end; /* 让按钮组向右靠拢 */
+    gap: 10px;
+}
+
+/* --- 按钮样式 (保持一致) --- */
+.btn {
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+/* 编辑按钮 - 主题橙色 */
+.btn-edit { 
+    background: var(--primary-color); 
+    color: white; 
+    border: none;
+}
+.btn-edit:hover { 
+    background: var(--primary-hover); 
+}
+
+/* 关闭按钮 - 深色风格 */
+.btn-close {
+    background: var(--text-dark);
+    color: white;
+    border: none;
+    height: 36px;
+    margin-top: 1px;
+}
+.btn-close:hover {
+    background: #000;
+}
+
+/* --- 缩放控制区 (保持一致) --- */
+.controls { 
+margin: 10px 0; 
+padding: 7px;
+background: #f8f9fa;
+border-radius: 5px;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 5px;
+}
+input[type=range] { width: 200px; cursor: pointer; accent-color: var(--primary-color); }
+.zoom-number-input { 
+width: 60px; 
+padding: 8px; 
+border: 1px solid #ddd; 
+border-radius: 4px; 
+text-align: center; 
+outline: none;
+}
+
+/* 图片展示区域 (保持一致) */
+.image-wrapper {
+width: 100%;
+overflow: visible; 
+display: flex;
+justify-content: center;
+}
+
+#mainImage { 
+transition: width 0.1s ease-out; 
+width: 35%; 
+height: auto; 
+display: block;
+box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+}
+
+/* --- 信息展示区 (保持一致) --- */
+.info-section { text-align: left; padding-top: 3px;margin-bottom: 10px; }
+.date-tag { color: #666; font-size: 1em; margin-bottom: 5px; }
+.notes-title { font-weight: bold; display: block; margin-bottom: 8px; color: #444; }
+.notes-text { 
+background: #fcfcfc; 
+padding: 15px; 
+border-left: 5px solid var(--primary-color); 
+white-space: pre-wrap; 
+min-height: 30px;
+font-size: 1em;
+line-height: 1.6;
+}
+
+/* 标签胶囊样式 */
+.view-tags-container { display: flex; flex-wrap: wrap; gap: 5px; }
+.view-tag-badge {
+background: var(--light-orange);
+color: var(--primary-color);
+padding: 2px 8px;
+border-radius: 12px;
+font-size: 11px;
+font-weight: bold;
+border: 1px solid var(--border-orange);
+}
+
+/* 调试与错误提示 */
+.debug-info { text-align: left; background: #fff3f3; color: #d9534f; padding: 10px; margin-top: 20px; font-size: 12px; border: 1px dashed #d9534f; }
+#errorMsg { color: white; padding: 50px; background: #333; width: 100%; }
+
+/* 引导链接 */
+.tiny-guide-link {
+position: fixed; top: 10px; left: 10px; font-size: 10px; color: #eba56b;
+text-decoration: none; z-index: 9999; opacity: 0.6; transition: all 0.3s ease;
+}
+.tiny-guide-link:hover { color: var(--primary-color); opacity: 1; transform: translateX(3px); }
+
+</style>
+</head>
+<body id="body">
+
+<a href="https://nqy-exp.github.io/niu/" target="_blank" rel="noopener noreferrer" class="tiny-guide-link">
+    {{ lang_dict['user_guide'] }}
+</a>
+
+<!-- 【修改后】顶部栏：采用三列 Grid 布局 -->
+<div class="header-bar">
+    <!-- 第一部分：左侧标题 -->
+    <h1 class="header-title">{{ filename }}</h1>
+
+    <!-- 第二部分：中间按钮 (现在位于正中心) -->
+    <div class="center-action">
+        <button onclick="window.close()" class="btn btn-close">{{ lang_dict['btn_close'] }}</button>
+    </div>
+
+    <!-- 第三部分：右侧操作组 -->
+    <div class="top-actions">
+        <!-- 编辑按钮 -->
+        <a href="/add_note/{{ filename }}" class="btn btn-edit">{{ lang_dict['btn_edit'] }}</a>
+    </div>
+</div>
+
+
+<div class="content">
+    <!-- 信息展示区 -->
+    <div class="info-section">
+        <div class="date-tag">{{ lang_dict['date_label'] }} {{ exp_date if exp_date else lang_dict['exp_date_none'] }}</div>
+        <span class="notes-title">{{ lang_dict['notes_label'] }}</span>
+        <div class="notes-text">{{ notes if notes else '' }}</div>
+        {% if tags %}
+        <div class="view-tags-container">
+            {% for tag in tags %}
+            <span class="view-tag-badge">#{{ tag }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 缩放控制区 -->
+    <div class="controls">
+        <label for="zoomSlider">{{ lang_dict['zoom_label'][:5] }}</label> 
+        <input type="range" id="zoomSlider" min="10" max="500" value="35">
+        <input type="number" id="zoomNumber" class="zoom-number-input" min="10" max="500" value="35">
+        <span id="zoomValue">35%</span>
+    </div>
+
+    <!-- 图片展示区 -->
+    <div class="image-wrapper">
+        <img src="/images/{{ filename }}" id="mainImage" onerror="handleError()">
+        <div id="errorMsg" style="display:none;">
+            ❌ {{ lang_dict['no_results'] }}
+        </div>
+    </div>
+
+    <!-- 调试信息 -->
+    <div id="debugBox" class="debug-info" style="display: none;">
+        <strong>🛠️ 调试诊断信息:</strong><br>
+        尝试访问的 URL: <code id="debugUrl"></code>
+    </div>
+</div>
+
+<script>
+// --- 核心逻辑：保持与 view.html 完全一致，确保缩放功能正常 ---
+const slider = document.getElementById('zoomSlider');
+const numInput = document.getElementById('zoomNumber');
+const img = document.getElementById('mainImage');
+const zoomText = document.getElementById('zoomValue');
+const errorMsg = document.getElementById('errorMsg');
+const debugBox = document.getElementById('debugBox');
+const debugUrl = document.getElementById('debugUrl');
+
+function updateZoom(val, source) {
+    if (val < 10) val = 10;
+    if (val > 500) val = 500;
+    img.style.width = val + '%';
+    zoomText.innerText = val + '%';
+    if (source === 'slider') {
+        numInput.value = val;
+    } else if (source === 'input') {
+        slider.value = val;
+    }
+}
+
+slider.addEventListener('input', function() {
+    updateZoom(parseInt(this.value), 'slider');
+});
+
+numInput.addEventListener('input', function() {
+    let val = parseInt(this.value);
+    if (!isNaN(val)) {
+        updateZoom(val, 'input');
+    }
+});
+
+function handleError() {
+    errorMsg.style.display = 'block';
+    debugBox.style.display = 'block';
+    debugUrl.innerText = window.location.origin + '/images/{{ filename }}';
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ lang_dict['title'] }} - {{ prefix }}</title>
+<style>
+/* 1. 全局变量 */
+:root {
+    --primary-color: #e67e22;       
+    --primary-hover: #d35400;      
+    --text-dark: #2c3e50;
+    --bg-gray: #f4f4f9;
+    --empty-note-bg: #fce8e6; 
+    --light-orange: #fef5ed;       
+    --border-orange: #fad7a0;      
+}
+
+body { font-family: sans-serif; margin: 40px; background: var(--bg-gray); color: var(--text-dark); }
+
+/* --- 2. 【核心修改】顶部标题与返回按钮的布局容器 --- */
+.header-container {
+    display: flex;
+    justify-content: space-between; /* 让标题在左，按钮在右 */
+    align-items: center;           /* 垂直居中对齐 */
+    margin-bottom: 25px;           /* 与下方表格的间距 */
+}
+
+.header-title { 
+    margin: 0; 
+    font-size: 1.6em; 
+    color: var(--text-dark); 
+}
+
+/* --- 3. 【核心修改】返回按钮的精致样式 --- */
+.btn-back-styled {
+    text-decoration: none;         /* 去掉下划线 */
+    background: var(--light-orange); /* 浅橙色背景 */
+    color: var(--primary-color);    /* 深橙色文字 */
+    padding: 8px 16px;             /* 增加内边距，做成“框”的感觉 */
+    border-radius: 6px;            /* 圆角 */
+    font-size: 14px;
+    font-weight: bold;
+    border: 1px solid var(--border-orange); /* 橙色细边框 */
+    transition: all 0.3s ease;     /* 悬停动画 */
+}
+
+.btn-back-styled:hover {
+    background: var(--primary-color); /* 悬停时背景变深 */
+    color: white;                     /* 悬停时文字变白 */
+    box-shadow: 0 2px 8px rgba(230, 126, 34, 0.3);
+}
+
+/* --- 其他原有样式保持不变并微调 --- */
+table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); table-layout: fixed; }
+th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; overflow: hidden; }
+th { background-color: #f8f9fa; color: #555; font-size: 13px; }
+
+.no-notes { background-color: var(--empty-note-bg) !important; }
+
+/* 备注列样式 */
+.notes-cell {
+    max-width: 280px;           
+    display: -webkit-box;       
+    -webkit-line-clamp: 2;      
+    line-clamp: 2;
+    -webkit-box-orient: vertical; 
+    overflow: hidden;           
+    text-overflow: ellipsis;    
+    white-space: normal;        
+    font-size: 13px;
+}
+
+/* 微型标签样式 */
+.tags-cell { vertical-align: middle; }
+.mini-tag-container { display: flex; flex-wrap: wrap; gap: 4px; }
+.mini-tag {
+    background: var(--light-orange);
+    color: var(--primary-color);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    border: 1px solid var(--border-orange);
+    white-space: nowrap;
+}
+
+/* 按钮样式 */
+.btn { padding: 5px 10px; text-decoration: none; border-radius: 4px; font-size: 12px; display: inline-block; transition: all 0.2s; }
+.btn-view { background: var(--primary-color); color: white; }
+.btn-view:hover { background: var(--primary-hover); }
+.btn-edit { background: #ffc107; color: black; margin-left: 4px; }
+.btn-edit:hover { background: #e0a800; }
+
+/* --- 极小使用的引导链接样式 --- */
+.tiny-guide-link {
+    position: fixed;         /* 固定在屏幕上，不随页面滚动 */
+    top: 10px;               /* 距离顶部 10px */
+    left: 10px;              /* 距离左侧 10px */
+    font-size: 10px;         /* 非常小的字体 */
+    color: #eba56b;          /* 浅灰色 (带一点点灰调) */
+    text-decoration: none;   /* 去掉下划线 */
+    z-index: 9999;           /* 确保它永远在最顶层 */
+    transition: all 0.3s ease; /* 平滑过渡动画 */
+    opacity: 0.6;            /* 默认半透明，不抢眼 */
+}
+
+.tiny-guide-link:hover {
+    color: var(--primary-color); /* 鼠标移上去变为主题橙色 */
+    opacity: 1;                  /* 变得清晰 */
+    transform: translateX(3px);  /* 极其轻微的向右滑动效果，增加互动感 */
+}
+
+</style>
+</head>
+<body id="body">
+
+    <a href="https://nqy-exp.github.io/niu/" target="_blank" rel="noopener noreferrer" class="tiny-guide-link">
+    {{ lang_dict['user_guide'] }}
+</a>
+
+
+<!-- 【核心修改】使用 Header Container 包裹标题和按钮 -->
+<div class="header-container">
+    <h1 class="header-title">📁 {{ prefix }}</h1>
+    <!-- 修改这里：由原本的 href="/" 改为 javascript:history.back() -->
+    <a href="javascript:void(0);" onclick="smartBack()" class="btn-back-styled"> {{ lang_dict['btn_back_prev'] }}</a>
+</div>
+
+
+
+<table id="mainTable">
+    <thead>
+        <tr>
+            <th style="width: 20%;">{{ lang_dict['filename_header'] }}</th>
+            <th style="width: 35%;">{{ lang_dict['notes_label'] }}</th>
+            <th style="width: 18%;">Tags</th>
+            <th style="width: 15%;">{{ lang_dict['date_label'] }}</th>
+            <th style="width: 12%;">{{ lang_dict['action_label'] }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr class="{{ 'no-notes' if not item.notes and (not item.tags or item.tags|length == 0) else '' }}">
+            <!-- 1. 文件名 -->
+            <td style="font-size: 13px; font-weight: 500;">{{ item.filename }}</td>
+            
+            <!-- 2. 备注列 -->
+            <td class="notes-cell">
+                {% if item.notes %}
+                    {{ item.notes }}
+                {% else %}
+                    <span style="color:#999; font-size:12px;">{{ lang_dict['status_empty'] }}</span>
+                {% endif %}
+            </td>
+
+            <!-- 3. 微型标签列 -->
+            <td class="tags-cell">
+                <div class="mini-tag-container">
+                    {% if item.tags %}
+                        {% for tag in item.tags %}
+                            <span class="mini-tag">#{{ tag }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </td>
+
+            <!-- 4. 日期列 -->
+            <td style="font-size: 13px; color: #666;">{{ item.experiment_date if item.experiment_date else '-' }}</td>
+
+            <!-- 5. 操作列 -->
+            <td>
+                <a href="/view/{{ item.filename }}" class="btn btn-view">{{ lang_dict['btn_view'] }}</a>
+                <a href="/add_note/{{ item.filename }}" class="btn btn-edit">{{ lang_dict['btn_edit'] }}</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<script>
+// --- 新增：智能返回逻辑 ---
+function smartBack() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const query = urlParams.get('q'); // 获取 URL 中的 q 参数
+
+    if (query) {
+        // 如果 URL 里有搜索词，说明是从搜索结果跳过来的
+        // 我们带上这个词跳回主页，这样用户就能看到之前的搜索结果
+        window.location.href = '/?q=' + encodeURIComponent(query);
+    } else {
+        // 如果没有搜索词，说明是直接从首页点进来的
+        // 直接回到主页即可
+        window.location.href = '/';
+    }
+}
+
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ lang_dict['title'] }} - Select</title>
+
+<style>
+/* --- 1. 基础变量与全局样式 (完全保留你的设计) --- */
+:root {
+--primary-color: #e67e22;
+--primary-hover: #d35400;
+--text-dark: #2c3e50;
+--bg-gray: #f4f4f9;
+--border-orange: #fad7a0;
+}
+
+body { font-family: sans-serif; margin: 0; padding: 20px; background: var(--bg-gray); color: var(--text-dark); }
+
+/* --- 导航与搜索 --- */
+.nav-header { 
+display: flex; justify-content: space-between; align-items: center; 
+padding-bottom: 15px; margin-bottom: 0; 
+}
+.search-box { position: relative; display: inline-block; }
+.search-box input {
+padding: 10px 35px 10px 10px; width: 300px; border: 2px solid #ddd; border-radius: 6px; outline: none; transition: all 0.3s; 
+}
+.search-box input:focus { border-color: var(--primary-color); }
+
+.clear-btn {
+position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+cursor: pointer; color: #ccc; font-size: 22px; line-height: 1; display: none; user-select: none; transition: color 0.2s;
+}
+.search-box:hover .clear-btn, .search-box input:focus + .clear-btn { display: block; }
+.clear-btn:hover { color: #e74c3c; }
+
+/* --- 选中项预览条 (Sticky) --- */
+.sticky-wrapper {
+position: sticky; top: 0; z-index: 1000; background: var(--bg-gray); padding-top: 5px; padding-bottom: 10px;
+}
+#selection-bar {
+display: flex; background: white; padding: 8px 15px; border-radius: 8px; margin-bottom: 20px; gap: 10px; align-items: center; flex-wrap: wrap;
+box-shadow: 0 2px 5px rgba(0,0,0,0.05); min-height: 38px; transition: all 0.3s ease;
+}
+#selection-bar:has(.selected-item) { box-shadow: 0 4px 12px rgba(230, 126, 34, 0.15); border: 1px solid var(--border-orange); }
+
+.selected-item {
+background: #fef5ed; color: #e67e22; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 5px; border: 1px solid #fad7a0;
+}
+.remove-selected { cursor: pointer; font-weight: bold; color: #e74c3c; }
+.clear-all-btn { margin-left: auto; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all 0.3s; }
+.clear-all-btn:hover { background: #f5c6cb; }
+
+/* --- 网格布局与卡片 --- */
+.grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+.image-card { 
+background: white; border-radius: 8px; padding: 8px; position: relative; 
+box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; 
+}
+.image-card:hover { transform: translateY(-3px); }
+.image-card.hidden { display: none !important; }
+.image-card.selected { border: 3px solid var(--primary-color); background: #fff3e0; }
+
+.checkbox-overlay { position: absolute; top: 8px; left: 8px; width: 20px; height: 20px; border: 2px solid white; background: rgba(0,0,0,0.3); border-radius: 4px; z-index: 10; }
+.image-card.selected .checkbox-overlay { background: var(--primary-color); }
+
+.image-viewport { width: 100%; aspect-ratio: 1/1; background: #e0e0e0; border-radius: 4px; overflow: hidden; position: relative; }
+.compare-img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; opacity: 0; transition: opacity 0.3s ease; }
+.compare-img.loaded { opacity: 1; }
+
+.loading-spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; color: #999; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+.filename-label { font-size: 12px; color: #666; margin-top: 8px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; }
+
+/* --- 其他组件 --- */
+.right-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; margin-top: 5px; }
+.lang-switcher { display: flex; background: #eee; padding: 4px; border-radius: 30px; }
+.lang-link { padding: 6px 16px; text-decoration: none; font-size: 14px; border-radius: 25px; color: #666; transition: all 0.3s; }
+.lang-link.active { background: var(--primary-color); color: white !important; }
+
+.compare-btn { background: var(--primary-color); color: white; padding: 10px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; transition: all 0.2s; }
+.compare-btn:hover { background: var(--primary-hover); }
+
+.empty-msg { text-align: center; padding: 50px; color: #999; grid-column: 1 / -1; }
+.home-link { text-decoration: none; color: inherit; display: inline-block; }
+.home-link:hover { opacity: 0.8; }
+
+.favicon-mini { width: 14px; height: 14px; vertical-align: super; margin-left: 3px; display: inline-block; }
+.btn { padding: 5px 10px; text-decoration: none; border-radius: 4px; font-size: 12px; display: inline-block; font-weight: 500; }
+.btn-edit { background: #ffc107; color: black; margin-left: 4px; }
+
+/* 联想框 */
+.suggestion-box { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 0 0 6px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 300px; overflow-y: auto; display: none; z-index: 9999; }
+.suggestion-item { padding: 10px 15px; cursor: pointer; font-size: 14px; color: var(--text-dark); border-bottom: 1px solid #f9f9f9; display: flex; align-items: center; transition: background 0.2s; }
+.suggestion-item:hover { background-color: var(--light-orange); color: var(--primary-color); }
+.suggestion-type { font-size: 10px; color: #aaa; margin-right: 8px; border: 1px solid #eee; padding: 1px 4px; border-radius: 3px; }
+
+/* --- 极小使用的引导链接样式 --- */
+.tiny-guide-link {
+    position: fixed;         /* 固定在屏幕上，不随页面滚动 */
+    top: 10px;               /* 距离顶部 10px */
+    left: 10px;              /* 距离左侧 10px */
+    font-size: 10px;         /* 非常小的字体 */
+    color: #eba56b;          /* 浅灰色 (带一点点灰调) */
+    text-decoration: none;   /* 去掉下划线 */
+    z-index: 9999;           /* 确保它永远在最顶层 */
+    transition: all 0.3s ease; /* 平滑过渡动画 */
+    opacity: 0.6;            /* 默认半透明，不抢眼 */
+}
+
+.tiny-guide-link:hover {
+    color: var(--primary-color); /* 鼠标移上去变为主题橙色 */
+    opacity: 1;                  /* 变得清晰 */
+    transform: translateX(3px);  /* 极其轻微的向右滑动效果，增加互动感 */
+}
+
+</style>
+</head>
+<body id="body">
+<a href="https://nqy-exp.github.io/niu/" target="_blank" rel="noopener noreferrer" class="tiny-guide-link">
+    {{ lang_dict['user_guide'] }}
+</a>
+
+<!-- 返回按钮 -->
+<a href="/" class="btn btn-edit" style="position: absolute; right: 0; top: 0; z-index: 9999;">← {{ lang_dict['btn_back_index'] }}</a>
+
+<!-- 顶部固定区域 -->
+<div class="sticky-wrapper">
+    <div class="nav-header">
+        <h1 style="margin:0;"><a href="/" class="home-link">🔬 {{ lang_dict['title'] }}<img src="/assets/favicon-180x180.png" class="favicon-mini"></a></h1>
+        <h2 style="margin:0; font-size: 1.2em;">{{ lang_dict['compare_mode_title'] }}</h2>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="{{ lang_dict['search_placeholder'] }}" value="{{ request.args.get('q', '') }}" autocomplete="off">
+            <span id="clearSearchBtn" class="clear-btn">&times;</span>
+            <div id="suggestionBox" class="suggestion-box"></div>
+        </div>
+        <div class="right-controls">
+            <div class="lang-switcher">
+                <a href="javascript:void(0)" data-lang="zh" class="lang-link {{ 'active' if current_lang == 'zh' else '' }}">中文</a>
+                <a href="javascript:void(0)" data-lang="en" class="lang-link {{ 'active' if current_lang == 'en' else '' }}">English</a>
+            </div>
+            <button class="compare-btn" id="goCompareBtn">{{ lang_dict['btn_compare'] }}</button>
+        </div>
+    </div>
+
+    <!-- 选中项预览条 -->
+    <div id="selection-bar"></div>
+</div>
+
+<!-- 主网格区域 -->
+<div class="grid-container" id="gridContainer"></div>
+
+<!-- 数据容器 -->
+<script id="data-holder" type="application/json">{{ all_items_json | safe }}</script>
+<script id="lang-holder" type="application/json">{{ lang_dict | tojson }}</script>
+
+
+<script>
+// 1. 初始化数据
+const ALL_DATA = JSON.parse(document.getElementById('data-holder').textContent);
+
+/** 
+ * 【优化点】：构建 DATA_MAP (哈希表)
+ * 将复杂度从 O(N) 的查找降低到 O(1)
+ */
+const DATA_MAP = new Map(ALL_DATA.map(item => [item.filename, item]));
+
+const LANG_DICT = JSON.parse(document.getElementById('lang-holder').textContent);
+
+let selectedFiles = new Set(); 
+let UNIQUE_TAGS = [];
+let debounceTimer = null;
+
+const gridContainer = document.getElementById('gridContainer');
+const selectionBar = document.getElementById('selection-bar');
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+const goCompareBtn = document.getElementById('goCompareBtn');
+const suggestionBox = document.getElementById('suggestionBox');
+
+// --- 初始化逻辑 ---
+function init() {
+    // 解析 URL 中的选中项状态 (保留功能)
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedFromUrl = urlParams.get('selected');
+    if (selectedFromUrl) {
+        const filesArray = decodeURIComponent(selectedFromUrl).split(',');
+        filesArray.forEach(f => { if(f && f.trim() !== "") selectedFiles.add(f.trim()); });
+    }
+
+    // 预提取标签用于联想
+    const tagSet = new Set();
+    ALL_DATA.forEach(item => { if (item.tags) item.tags.forEach(t => tagSet.add(t)); });
+    UNIQUE_TAGS = Array.from(tagSet);
+
+    renderAllShells(ALL_DATA); 
+    updateTopBar();
+    setupIntersectionObserver();
+}
+
+// --- 创建所有卡片壳子 ---
+function renderAllShells(data) {
+    gridContainer.innerHTML = '';
+    if (!data || data.length === 0) {
+        gridContainer.innerHTML = `<div class="empty-msg">${LANG_DICT['no_results'] || 'No results'}</div>`;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    data.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `image-card ${selectedFiles.has(item.filename) ? 'selected' : ''}`;
+        card.dataset.filename = item.filename; 
+        card.onclick = () => toggleSelection(item.filename, card);
+
+        // 1. 使用 innerHTML 设置那些【确定是安全】的 HTML 结构
+        card.innerHTML = `
+            <div class="checkbox-overlay"></div>
+            <div class="image-viewport" data-src="/thumbnails/${item.filename.replace(/\.[^/.]+$/, '.webp')}">
+                <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" 
+                     class="compare-img" 
+                     style="opacity: 0;">
+                <div class="loading-spinner">...</div>
+            </div>
+        `;
+
+        // 2. 【核心修复】：使用 createElement + textContent 来安全地添加文件名标签
+        const label = document.createElement('div');
+        label.className = 'filename-label';
+        // 使用 textContent，即使 filename 里有 <script> 也会被当做纯文本显示，不会执行
+        label.textContent = item.display_name || item.filename; 
+        card.appendChild(label);
+
+        fragment.appendChild(card);
+    });
+    gridContainer.appendChild(fragment);
+}
+
+// --- 按需加载图片 (Intersection Observer) ---
+function setupIntersectionObserver() {
+    const transparentPixel = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const viewport = entry.target;
+            const img = viewport.querySelector('img');
+            if (!img) return;
+
+            if (entry.isIntersecting) {
+                // 【进入视口】：从 data-src 读取真实 URL
+                const imgUrl = viewport.dataset.src;
+                if (imgUrl && img.src !== imgUrl) {
+                    img.src = imgUrl;
+                    img.style.opacity = "1"; // 图片加载后显现
+                    // 移除 loading 动画
+                    const spinner = viewport.querySelector('.loading-spinner');
+                    if (spinner) spinner.remove();
+                }
+            } else {
+                // 【离开视口】：清空 src，释放内存
+                if (img.src !== transparentPixel) {
+                    img.src = transparentPixel;
+                    img.style.opacity = "0"; // 隐藏图片
+                    // 重新放回 loading 动画，方便下次进入时再次触发
+                    const spinner = document.createElement('div');
+                    spinner.className = 'loading-spinner';
+                    spinner.innerText = '...';
+                    viewport.appendChild(spinner);
+                }
+            }
+        });
+    }, { 
+        rootMargin: '300px' // 提前 300px 加载，用户滚动时不会感到白屏
+    });
+
+    document.querySelectorAll('.image-viewport').forEach(vp => observer.observe(vp));
+}
+
+// --- 选中逻辑 ---
+function toggleSelection(filename, cardElement) {
+    if (selectedFiles.has(filename)) {
+        selectedFiles.delete(filename);
+        cardElement.classList.remove('selected');
+    } else {
+        selectedFiles.add(filename);
+        cardElement.classList.add('selected');
+    }
+    updateTopBar();
+}
+
+function updateTopBar() {
+    selectionBar.style.display = 'flex'; 
+    if (selectedFiles.size > 0) {
+        let html = '';
+        selectedFiles.forEach(filename => {
+            // 【优化点】：使用 Map.get() 代替 ALL_DATA.find()，速度极快
+            const item = DATA_MAP.get(filename);
+            const displayName = item ? item.display_name : filename;
+
+            html += `
+                <div class="selected-item">
+                    ${displayName} <span class="remove-selected" onclick="removeFile('${filename}', event)">×</span>
+                </div>`;
+        });
+        html += `<button class="clear-all-btn" onclick="clearAllSelection()">${LANG_DICT['btn_clear_all'] || 'Clear All'}</button>`;
+        selectionBar.innerHTML = html;
+    } else {
+        selectionBar.innerHTML = `<span style="color: #bbb; font-size: 13px; padding-left: 5px; font-style: italic;">${LANG_DICT['no_selection_msg'] || 'No images selected'}</span>`;
+    }
+    goCompareBtn.innerText = `${LANG_DICT['btn_compare'] || 'Compare'} (${selectedFiles.size})`;
+}
+
+window.removeFile = function(filename, event) {
+    event.stopPropagation();
+    selectedFiles.delete(filename);
+    const card = document.querySelector(`.image-card[data-filename="${filename}"]`);
+    if (card) card.classList.remove('selected');
+    updateTopBar();
+};
+
+window.clearAllSelection = function() {
+    const message = LANG_DICT['question_clear_all'] || "Are you sure you want to clear all selections?";
+    if (confirm(message)) {
+        selectedFiles.clear();
+        // 清理 URL 参数并刷新以保持状态一致性
+        window.location.href = window.location.pathname;
+    }
+};
+
+// --- 搜索逻辑 ---
+searchInput.addEventListener('input', function() {
+    const query = this.value.trim();
+    clearTimeout(debounceTimer);
+
+    updateSuggestions(query);
+
+    debounceTimer = setTimeout(() => {
+        const cards = document.querySelectorAll('.image-card');
+        if (query === "") {
+            cards.forEach(card => card.classList.remove('hidden'));
+            return;
+        }
+
+        let isTagMode = query.startsWith('#');
+        let searchKey = isTagMode ? query.substring(1).toLowerCase() : query.toLowerCase();
+
+        cards.forEach(card => {
+            const filename = card.dataset.filename;
+            // 【优化点】：使用 Map.get() 代替 ALL_DATA.find()，应对海量数据
+            const item = DATA_MAP.get(filename); 
+            if (!item) return;
+
+            let isMatch = false;
+            if (isTagMode) {
+                isMatch = item.tags && item.tags.some(t => t.toLowerCase().includes(searchKey));
+            } else {
+                isMatch = item.filename.toLowerCase().includes(searchKey) || 
+                          (item.notes && item.notes.toLowerCase().includes(searchKey)) ||
+                          (item.tags && item.tags.some(t => t.toLowerCase().includes(searchKey)));
+            }
+
+            if (isMatch) card.classList.remove('hidden');
+            else card.classList.add('hidden');
+        });
+    }, 300); 
+});
+
+clearSearchBtn.addEventListener('click', function() {
+    searchInput.value = ''; 
+    this.style.display = 'none';
+    searchInput.dispatchEvent(new Event('input')); 
+    searchInput.focus();
+});
+
+// --- 联想功能 ---
+function updateSuggestions(query) {
+    if (!query.trim()) { suggestionBox.style.display = 'none'; return; }
+    const trimmedQuery = query.trim().toLowerCase();
+    const isTagMode = trimmedQuery.startsWith('#'); 
+    let suggestions = [];
+
+    if (isTagMode) {
+        const term = trimmedQuery.substring(1); 
+        UNIQUE_TAGS.forEach(tag => {
+            if (tag.toLowerCase().includes(term)) suggestions.push({ type: 'Tag', value: `#${tag}`, displayName: `#${tag}`, isTag: true });
+        });
+    } else {
+        // 这里遍历 ALL_DATA 是正常的，因为联想通常限制在 6 条以内
+        ALL_DATA.forEach(item => {
+            if (suggestions.length >= 6) return;
+            if (item.filename.toLowerCase().includes(trimmedQuery)) {
+                suggestions.push({ type: 'File', value: item.filename, displayName: item.display_name, isTag: false });
+            } else if (item.tags && item.tags.some(t => t.toLowerCase().includes(trimmedQuery))) {
+                const matched = item.tags.find(t => t.toLowerCase().includes(trimmedQuery));
+                if (matched) suggestions.push({ type: 'Tag', value: `#${matched}`, displayName: `#${matched}`, isTag: true });
+            }
+        });
+    }
+
+    if (suggestions.length > 0) {
+        suggestionBox.innerHTML = suggestions.map(s => `
+            <div class="suggestion-item" data-value="${s.value}" data-display="${s.displayName}" data-is-tag="${s.isTag}">
+                <span class="suggestion-type">${s.type}</span><span>${s.displayName}</span>
+            </div>`).join('');
+        suggestionBox.style.display = 'block';
+    } else {
+        suggestionBox.style.display = 'none';
+    }
+}
+
+suggestionBox.addEventListener('click', function(e) {
+    const item = e.target.closest('.suggestion-item');
+    if (!item) return;
+    let valForUrl = item.getAttribute('data-value'); 
+    let displayVal = item.getAttribute('data-display'); 
+    const isTag = item.getAttribute('data-is-tag') === 'true';
+
+    if (isTag && !valForUrl.startsWith('#')) valForUrl = '#' + valForUrl;
+
+    searchInput.value = displayVal;
+    suggestionBox.style.display = 'none';
+    window.location.href = `/?q=${encodeURIComponent(valForUrl)}`; 
+});
+
+document.addEventListener('click', (e) => { if(!e.target.closest('.search-box')) suggestionBox.style.display='none'; });
+
+// --- 语言切换 ---
+document.querySelectorAll('.lang-link').forEach(link => {
+    link.addEventListener('click', function() {
+        const targetLang = this.dataset.lang;
+        const query = searchInput.value.trim();
+        let destinationUrl = window.location.pathname;
+        let paramsArray = [];
+        if (query) paramsArray.push(`q=${encodeURIComponent(query)}`);
+        if (selectedFiles.size > 0) {
+            paramsArray.push(`selected=${encodeURIComponent(Array.from(selectedFiles).join(','))}`);
+        }
+        if (paramsArray.length > 0) destinationUrl += '?' + paramsArray.join('&');
+
+        window.location.href = `/set_lang/${targetLang}?next=${encodeURIComponent(destinationUrl)}`;
+    });
+});
+
+// --- 对比跳转 ---
+goCompareBtn.onclick = function() {
+    if (selectedFiles.size === 0) {
+        // 使用反引号 ``，这样 ${} 才能生效
+        return alert(`${LANG_DICT['please_select_msg']}`);
+    }
+    const fileList = Array.from(selectedFiles).join(',');
+    window.location.href = `/compare_view?files=${encodeURIComponent(fileList)}`;
+};
+
+
+window.onload = init;
+</script>
+</body>
+</html>
