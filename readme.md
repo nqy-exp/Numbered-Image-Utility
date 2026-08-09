@@ -6,6 +6,12 @@
 </div>
 
 ---
+
+> ⚠️ 个人工作流工具 —— 对我自己够用，使用请自行斟酌，不接受 PR。
+>
+> ⚠️ A personal workflow tool — it works for me, use at your own discretion, no PRs accepted.
+---
+
 >开发模式 / Development Mode: Vibe Coding
 >
 >本项目与 Google/Gemma-4-26B-a4b（Q6_K）共同创作完成。
