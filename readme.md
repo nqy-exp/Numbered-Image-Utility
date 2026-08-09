@@ -4,9 +4,11 @@
   <p>一个轻量的编号图片管理与对比工具</p>
   <p>A lightweight tool for managing and comparing numbered image datasets.</p>
 </div>
+
 ---
 
 > ⚠️ 个人工作流工具 —— 对我自己够用，使用请自行斟酌，不接受 PR。
+>
 > ⚠️ A personal workflow tool — it works for me, use at your own discretion, no PRs accepted.
 ---
 
