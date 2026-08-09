@@ -246,7 +246,7 @@ python app.py --project demo_project --port 5001
 > 
 > 一旦完成，您可以通过下方链接查看详细教程与常见问题：
 > Once completed, you can access detailed tutorials and FAQ via the link below:
-> 👉 **[点击这里查看使用说明/Click Here to Visit the User Guide](https://nqy-exp.github.io/niu/)**
+> 👉 **[点击这里查看使用说明/Click Here to Visit the User Guide](https://nqy-exp.github.io/NIU/)**
 
 
 ---
