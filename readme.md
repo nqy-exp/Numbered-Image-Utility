@@ -52,6 +52,74 @@
 
 ---
 
+## 🚀 快速开始 / Getting Started
+
+### 1. 环境要求 / Prerequisites
+- Python 3.8+
+- `pip install flask pandas openpyxl watchdog Pillow python-dotenv`
+
+### 2. 安装与运行 / Installation & Running
+
+#### **第一步：克隆仓库 (Clone the repo)**
+```bash
+git clone https://github.com/nqy-exp/Numbered-Image-Utility.git
+cd Numbered-Image-Utility
+```
+
+#### **第二步：设置虚拟环境 (Setup Virtual Environment - Recommended)**
+*建议使用虚拟环境以隔离依赖。 / Highly recommended to use a venv to isolate dependencies.*
+
+**Windows:**
+```bash
+python -m venv venv
+.\venv\Scripts\activate
+```
+
+**macOS / Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+#### **第三步：安装依赖 (Install Dependencies)**
+```bash
+pip install -r requirements.txt
+```
+
+#### **第四步：安全配置 (Security Configuration)**
+在项目根目录下手动创建一个名为 `.env` 的文件，并填入以下内容（请自行设置一个随机字符串）：
+*Create a `.env` file in the project root and add the following (use your own random string):*
+
+```text
+SECRET_KEY=your_random_secret_string_here
+```
+
+#### **第五步：运行程序 (Run the app)**
+```bash
+# 指定项目名称和端口 (Specify project name and port)
+python app.py --project my_project --port 5001
+```
+
+*(多个项目可以分配不同端口并行运行 / You can run multiple projects in parallel by assigning different ports.)*
+
+#### **第六步：放入图片开始使用 Place image files and start using **
+访问 http://127.0.0.1:5001 ，或者是其他设定端口，然后开始使用。
+*Go to http://127.0.0.1:5001 or other settled port, then begin to use.*
+
+---
+### 🚀 快速体验 / Quick Demo
+配有demo演示项目，直接运行以下命令，即可进入带有预置演示数据的项目进行体验：
+*A demo project is included. Simply run the following command to launch a project preloaded with demo data for hands-on experience:*
+
+```bash
+python app.py --project demo_project --port 5001
+```
+
+然后访问 http://127.0.0.1:5001，你就能立即看到完整的管理效果！
+*Then go to http://127.0.0.1:5001 to instantly see the complete management system at work!*
+
+---
+
 ## 📏 编号图片命名规范 / Image Numbering Convention (Critical)
 
 为了实现自动分组、快速搜索和高效排序，所有图片文件必须遵循以下命名协议。请务必严格遵守，否则功能将无法正常工作。
@@ -137,6 +205,19 @@ projects/
 
 ***Important***: Please place your image files into the `images/` subdirectory of your project folder (e.g., `projects/project_name/images/`) so that the system can detect and load them correctly.To delete images, simply remove them from this folder. Please ensure you have a data backup!
 
+---
+
+### 📖 在线交互式指南与演示 / Online Interactive Manual & Demo
+
+> [!TIP]
+> **想要更直观地了解如何使用、查看操作截图或常见问题？请点击下方链接：**
+> *For a intuitive guide, including screenshots and FAQ, please visit:*
+> > [!NOTE]
+> **在线交互式指南正在建设中... / Online Interactive Manual is under construction.**
+> 
+> 一旦完成，您可以通过下方链接查看详细教程与常见问题：
+> Once completed, you can access detailed tutorials and FAQ via the link below:
+> 👉 **[点击这里查看使用说明/Click Here to Visit the User Guide](https://nqy-exp.github.io/NIU/)**
 
 ---
 
@@ -165,89 +246,6 @@ projects/
 > 4. **Naming Convention**: Filenames should follow an "alphanumeric-number" structure (e.g., `T001-01.jpg`). The prefix is extensible but must be separated from the number by a hyphen (`-`) and should not contain special symbols.
 > 5. **Data Backup**: Always maintain backups of your original images. **Do not use this software's directory as your sole storage medium.** The author is not responsible for any data loss.
 > ⚠️ **Notice**: This project's code was AI-assisted. Users are advised to review and test the code before use.
-
----
-
-## 🚀 快速开始 / Getting Started
-
-### 1. 环境要求 / Prerequisites
-- Python 3.8+
-- `pip install flask pandas openpyxl watchdog Pillow python-dotenv`
-
-### 2. 安装与运行 / Installation & Running
-
-#### **第一步：克隆仓库 (Clone the repo)**
-```bash
-git clone https://github.com/nqy-exp/Numbered-Image-Utility.git
-cd Numbered-Image-Utility
-```
-
-#### **第二步：设置虚拟环境 (Setup Virtual Environment - Recommended)**
-*建议使用虚拟环境以隔离依赖。 / Highly recommended to use a venv to isolate dependencies.*
-
-**Windows:**
-```bash
-python -m venv venv
-.\venv\Scripts\activate
-```
-
-**macOS / Linux:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-#### **第三步：安装依赖 (Install Dependencies)**
-```bash
-pip install -r requirements.txt
-```
-
-#### **第四步：安全配置 (Security Configuration)**
-在项目根目录下手动创建一个名为 `.env` 的文件，并填入以下内容（请自行设置一个随机字符串）：
-*Create a `.env` file in the project root and add the following (use your own random string):*
-
-```text
-SECRET_KEY=your_random_secret_string_here
-```
-
-#### **第五步：运行程序 (Run the app)**
-```bash
-# 指定项目名称和端口 (Specify project name and port)
-python app.py --project my_project --port 5001
-```
-
-*(多个项目可以分配不同端口并行运行 / You can run multiple projects in parallel by assigning different ports.)*
-
-#### **第六步：放入图片开始使用 Place image files and start using **
-访问 http://127.0.0.1:5001 ，或者是其他设定端口，然后开始使用。
-*Go to http://127.0.0.1:5001 or other settled port, then begin to use.*
-
----
-### 🚀 快速体验 / Quick Demo
-配有demo演示项目，直接运行以下命令，即可进入带有预置演示数据的项目进行体验：
-*A demo project is included. Simply run the following command to launch a project preloaded with demo data for hands-on experience:*
-
-```bash
-python app.py --project demo_project --port 5001
-```
-
-然后访问 http://127.0.0.1:5001，你就能立即看到完整的管理效果！
-*Then go to http://127.0.0.1:5001 to instantly see the complete management system at work!*
-
----
-
-### 📖 在线交互式指南与演示 / Online Interactive Manual & Demo
-
-> [!TIP]
-> **想要更直观地了解如何使用、查看操作截图或常见问题？请点击下方链接：**
-> *For a intuitive guide, including screenshots and FAQ, please visit:*
-> > [!NOTE]
-> **在线交互式指南正在建设中... / Online Interactive Manual is under construction.**
-> 
-> 一旦完成，您可以通过下方链接查看详细教程与常见问题：
-> Once completed, you can access detailed tutorials and FAQ via the link below:
-> 👉 **[点击这里查看使用说明/Click Here to Visit the User Guide](https://nqy-exp.github.io/NIU/)**
-
 
 ---
 
