@@ -63,6 +63,29 @@ input[type=range] { width: 80px; accent-color: var(--primary-color); }
 .info-filename { font-weight: bold; font-size: 0.9em; display: block; word-break: break-all; }
 .info-date { font-size: 0.75em; color: #888; margin-top:4px; }
 .info-notes { font-size: 0.8em; color: #555; margin-top:6px; white-space: pre-wrap; }
+/* --- 标签药丸容器 --- */
+/* --- 更加精致、小巧的标签容器 --- */
+.info-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;           /* 缩小标签之间的间距 */
+    margin-top: 5px;    /* 微调与上方备注的距离 */
+}
+
+/* --- 微型药丸样式 (Compact Pill Style) --- */
+.tag-pill {
+    background-color: #fef5ed;   /* 浅橙色背景 */
+    color: #e67e22;              /* 主题橙色文字 */
+    padding: 0.8px 4px;            /* 【关键】大幅缩小内边距 (上下1px, 左右5px) */
+    border-radius: 6px;          /* 稍微减小圆角，使其更紧凑 */
+    font-size: 0.6em;           /* 【关键】进一步减小字号 */
+    font-weight: 600;            /* 虽然小，但保持粗度以便阅读 */
+    display: inline-block;
+    white-space: nowrap;
+    border: 1px solid #fad7a0;   /* 极细的边框增加质感 */
+}
+
+
 
 /* 排序弹窗 (Modal) */
 #sortModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
@@ -265,6 +288,7 @@ function createCompareCard(item, index) {
            <a href="/view_com/${encodeURIComponent(item.filename)}" target="_blank" class="info-filename-link" id="link-${index}"></a>
             <div class="info-date" id="date-${index}"></div>
             <div class="info-notes" id="notes-${index}"></div>
+            <div class="info-tags" id="tags-${index}"></div> 
         </div>
     `;
 
@@ -284,6 +308,28 @@ function createCompareCard(item, index) {
 
     const notesEl = card.querySelector(`#notes-${index}`);
     if (notesEl) notesEl.textContent = item.notes || '';
+
+    const tagsEl = card.querySelector(`#tags-${index}`);
+if (tagsEl) {
+    tagsEl.innerHTML = ''; // 首先清空容器内容
+
+    // 如果 item.tags 存在且是数组，则遍历它
+    if (item.tags && Array.isArray(item.tags)) {
+        item.tags.forEach(tagText => {
+            // 创建一个新的 span 元素
+            const pill = document.createElement('span');
+            pill.className = 'tag-pill'; // 应用药丸样式
+            
+            // 设置内容，并自动加上 # 号 (如果原始数据里没带的话)
+            // 这里假设你的 item.tags 里的字符串是不带 # 的纯文字
+            const cleanTag = tagText.trim().replace(/^#/, ''); 
+            pill.textContent = `#${cleanTag}`; 
+            
+            // 将这个药丸添加到容器中
+            tagsEl.appendChild(pill);
+        });
+    }
+}
 
     // --- 以下是原有的逻辑，保持不变 ---
     if (!state.domViewport || !state.domImg) return;
