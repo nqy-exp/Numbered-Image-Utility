@@ -26,6 +26,11 @@
 ### English
 **Numbered Image Utility** is a lightweight tool specifically designed for experimental data management. It solves efficiency issues in viewing, annotating, and comparing large sets of numbered images. It supports rapid searching via systematic numbering and custom tags. Through automated thumbnail synchronization, it provides lightning-fast previews during comparison while minimizing memory footprint.
 
+<p align="center">
+  <img src="projects/demo_project/images/index-02.png" width="600px" alt="Demo Project Index">
+</p>
+NIU的主页
+*Index of NIU*
 ---
 
 ## ✨ 核心功能 / Key Features
@@ -55,6 +60,16 @@
   - 支持选择性导出“内容为空”的行，方便针对性补全缺失信息。
   - 支持单独下载错误记录，无需手动筛选。
   - *Quickly import/export image notes, dates, and tags via Excel or CSV. Supports selective export of empty rows and downloading error logs for rapid correction.*
+
+---
+
+### 📖 在线说明书 / Online User Guide
+
+> [!TIP]
+> **想要更直观地了解如何使用、查看操作截图或常见问题？请点击下方链接：**
+> *For a intuitive guide, including screenshots and FAQ, please visit:*
+>
+> 👉 **[点击这里查看使用说明/Click Here to Visit the User Guide](https://nqy-exp.github.io/NIU/)**
 
 ---
 
@@ -213,19 +228,6 @@ projects/
 
 ---
 
-### 📖 在线交互式指南与演示 / Online Interactive Manual & Demo
-
-> [!TIP]
-> **想要更直观地了解如何使用、查看操作截图或常见问题？请点击下方链接：**
-> *For a intuitive guide, including screenshots and FAQ, please visit:*
-> > [!NOTE]
-> **在线交互式指南正在建设中... / Online Interactive Manual is under construction.**
-> 
-> 一旦完成，您可以通过下方链接查看详细教程与常见问题：
-> Once completed, you can access detailed tutorials and FAQ via the link below:
-> 👉 **[点击这里查看使用说明/Click Here to Visit the User Guide](https://nqy-exp.github.io/NIU/)**
-
----
 
 ## ⚠️ 使用限制与免责声明 / Limitations & Disclaimer
 
