@@ -1078,15 +1078,30 @@ def download_selective():
     filtered_df = df[mask].copy()
 
     # 4. 执行排序逻辑
+# --- 修改后的 download_selective 排序逻辑 ---
+# 4. 执行排序逻辑 (支持多级排序：日期相同时按文件名升序)
     if not filtered_df.empty:
-        try:
-            ascending = (order == 'asc')
-            if sort_by in filtered_df.columns:
-                filtered_df = filtered_df.sort_values(by=sort_by, ascending=ascending)
-            else:
-                filtered_df = filtered_df.sort_values(by='filename', ascending=ascending)
-        except Exception as e:
-            print(f"Selective sort error: {e}")
+       try:
+           ascending_flag = (order == 'asc')
+        
+        # 如果用户选择了按日期排序
+           if sort_by == 'experiment_date':
+             # 【核心逻辑】：第一优先级是日期 (遵循用户选择的升/降)，
+            # 第二优先级是 filename (固定为 True，即字母升序)
+                filtered_df = filtered_df.sort_values(
+                    by=['experiment_date', 'filename'], 
+                   ascending=[ascending_flag, True]
+                 )
+           elif sort_by in filtered_df.columns:
+            # 其他情况：按用户指定的列排序
+              filtered_df = filtered_df.sort_values(by=sort_by, ascending=ascending_flag)
+           else:
+            # 兜底逻辑：按文件名排序
+              filtered_df = filtered_df.sort_values(by='filename', ascending=ascending_flag)
+            
+       except Exception as e:
+          print(f"Selective sort error: {e}")
+
 
     # 5. 【核心修改】：严格控制列顺序和翻译，且不包含 updated_at
     # 我们直接使用 COLS_SELECTIVE 来提取原始数据，确保不会多出列
@@ -1144,15 +1159,27 @@ def export_all():
     if df.empty:
         return jsonify({"status": "error", "message": "No files found"}), 400
 
-    # 执行排序
+
+# 执行排序 (支持多级排序：日期相同时按文件名升序)
     try:
-        ascending = (order == 'asc')
-        if sort_by in df.columns:
-            df = df.sort_values(by=sort_by, ascending=ascending)
-        else:
-            df = df.sort_values(by='filename', ascending=ascending)
+       ascending_flag = (order == 'asc')
+    
+       if sort_by == 'experiment_date':
+        # 【核心逻辑】：第一优先级是日期 (遵循用户选择的升/降)，
+        # 第二优先级是 filename (固定为 True，即字母升序)
+          df = df.sort_values(
+            by=['experiment_date', 'filename'], 
+            ascending=[ascending_flag, True]
+         )
+       elif sort_by in df.columns:
+        # 其他情况：按用户指定的列排序
+           df = df.sort_values(by=sort_by, ascending=ascending_flag)
+       else:
+        # 兜底逻辑：按文件名排序
+          df = df.sort_values(by='filename', ascending=ascending_flag)
     except Exception as e:
-        print(f"Sort error: {e}")
+      print(f"Sort error: {e}")
+
 
     # 5. 【核心修改】：严格使用 COLS_EXPORT_ALL 来包含 updated_at
     df = df[COLS_EXPORT_ALL].copy()
